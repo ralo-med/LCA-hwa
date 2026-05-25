@@ -57,6 +57,9 @@ const MAX_MONTHS = 60;
 const fmtPct = (v: number | null | undefined) =>
   v === null || v === undefined ? "—" : `${v.toFixed(0)}%`;
 
+/** K-M SVG와 동일: 생존율 100% → top 0%, 0% → top 100% */
+const Y_AXIS_TICKS = [100, 75, 50, 25, 0] as const;
+
 const SurvivalChart = ({ data, isLoading }: SurvivalChartProps) => {
   const stroke = "hsl(var(--primary))";
   const curve = data?.curve ?? [];
@@ -111,21 +114,29 @@ const SurvivalChart = ({ data, isLoading }: SurvivalChartProps) => {
           실선 = 치료 코호트 K-M, 점선 = 미치료 모델 추정(물음표 참고).
         </p>
 
-        <div className="w-full py-6 pl-8 pr-2">
-          <div className="relative h-56 w-full">
-            <div className="pointer-events-none absolute left-0 top-0 flex h-full flex-col justify-between text-[10px] font-medium text-muted-foreground">
-              <span>100%</span>
-              <span>75%</span>
-              <span>50%</span>
-              <span>25%</span>
-              <span>0%</span>
-            </div>
+        <div className="flex w-full gap-2 py-6 pr-2">
+          <div
+            className="relative h-56 w-9 shrink-0 text-right text-[10px] font-medium tabular-nums text-muted-foreground"
+            aria-hidden
+          >
+            {Y_AXIS_TICKS.map((pct) => (
+              <span
+                key={pct}
+                className="absolute right-0 -translate-y-1/2 leading-none"
+                style={{ top: `${100 - pct}%` }}
+              >
+                {pct}%
+              </span>
+            ))}
+          </div>
 
-            <svg
-              className="h-full w-full overflow-visible"
-              viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-              preserveAspectRatio="none"
-            >
+          <div className="min-w-0 flex-1">
+            <div className="relative h-56 w-full">
+              <svg
+                className="h-full w-full overflow-visible"
+                viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+                preserveAspectRatio="none"
+              >
             {[0, 25, 50, 75, 100].map((v) => (
               <line
                 key={v}
@@ -184,16 +195,17 @@ const SurvivalChart = ({ data, isLoading }: SurvivalChartProps) => {
                 조건 일치 환자 부족
               </text>
             )}
-            </svg>
-          </div>
+              </svg>
+            </div>
 
-          <div className="mt-4 flex justify-between text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            <span>0</span>
-            <span>1년</span>
-            <span>2년</span>
-            <span>3년</span>
-            <span>4년</span>
-            <span>5년</span>
+            <div className="mt-4 flex justify-between text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              <span>0</span>
+              <span>1년</span>
+              <span>2년</span>
+              <span>3년</span>
+              <span>4년</span>
+              <span>5년</span>
+            </div>
           </div>
         </div>
 
