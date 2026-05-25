@@ -30,7 +30,7 @@ export function triggerPrint(): void {
   setTimeout(() => window.print(), 200);
 }
 
-/** 소세포 제외 — NSCLC식 드라이버 변이·PD-L1 입력·필터 대상 */
+/** 소세포 제외 — NSCLC식 드라이버 변이 입력·K-M 필터 대상 */
 export function usesNsclcBiomarkerPanel(h: Histology): boolean {
   return h !== 'smallcell';
 }

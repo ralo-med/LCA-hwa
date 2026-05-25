@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MUTATION_OPTIONS, PDL1_OPTIONS, TEXT_MODEL } from '@/constants';
+import { MUTATION_OPTIONS, TEXT_MODEL } from '@/constants';
 import { callGemini, extractText } from '@/lib/gemini';
 import { histologyLabel, usesNsclcBiomarkerPanel } from '@/lib/utils';
 import type { PatientProfile } from '@/types';
@@ -10,7 +10,7 @@ export function useAIInsights() {
   const [errorMsg, setErrorMsg] = useState<string>('');
 
   const generate = async (profile: PatientProfile) => {
-    const { age, gender, histology, selectedMutations, pdl1 } = profile;
+    const { age, gender, histology, selectedMutations } = profile;
     setIsGenerating(true);
     setErrorMsg('');
     setResponse('');
@@ -23,9 +23,7 @@ export function useAIInsights() {
           )
             .map((m) => m.label)
             .join(', ');
-          const pdl1Label =
-            PDL1_OPTIONS.find((o) => o.id === pdl1)?.label ?? '결과 없음';
-          return `변이: ${mutationLabels}, PD-L1: ${pdl1Label}`;
+          return `변이: ${mutationLabels} (PD-L1 %는 앱에서 입력·K-M 반영 없음, 진료 TPS·가이드라인 참고)`;
         })()
       : '소세포폐암(표적치료·PD-L1 % 기반 1차 선택 해당 적음)';
 

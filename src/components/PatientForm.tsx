@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Stethoscope, User } from "lucide-react";
-import { MUTATION_OPTIONS, PDL1_OPTIONS } from "@/constants";
+import { MUTATION_OPTIONS } from "@/constants";
+import { getPdl1SurvivalReference } from "@/lib/pdl1-reference";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +23,6 @@ interface PatientFormProps {
   setAge: (v: number) => void;
   setGender: (v: Gender) => void;
   setHistology: (v: Histology) => void;
-  setPdl1: (v: string) => void;
   toggleMutation: (id: string) => void;
 }
 
@@ -30,11 +31,19 @@ const PatientForm = ({
   setAge,
   setGender,
   setHistology,
-  setPdl1,
   toggleMutation,
 }: PatientFormProps) => {
-  const { age, gender, histology, selectedMutations, pdl1 } = profile;
+  const { age, gender, histology, selectedMutations } = profile;
   const biomarkerSelectable = usesNsclcBiomarkerPanel(histology);
+  const pdl1Ref = getPdl1SurvivalReference(histology);
+  const [pdl1TierId, setPdl1TierId] = useState<string | null>(null);
+
+  const pdl1TierIds = new Set(pdl1Ref?.tiers.map((t) => t.id) ?? []);
+  const activePdl1TierId =
+    pdl1TierId && pdl1TierIds.has(pdl1TierId) ? pdl1TierId : null;
+
+  const selectedPdl1Tier =
+    pdl1Ref?.tiers.find((t) => t.id === activePdl1TierId) ?? null;
 
   return (
     <aside className="no-print space-y-6 lg:col-span-4">
@@ -115,48 +124,6 @@ const PatientForm = ({
 
           <Separator />
 
-          {/* PD-L1 (NSCLC만) */}
-          <div className="space-y-2">
-            <Label
-              className={
-                biomarkerSelectable ? undefined : "text-muted-foreground"
-              }
-            >
-              PD-L1 발현율
-            </Label>
-            {!biomarkerSelectable && (
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                소세포폐암은 비소세포폐암과 달리, PD-L1 %에 따라 1차 약을 고르는
-                경우가 많지 않습니다.
-              </p>
-            )}
-            <div
-              className={
-                biomarkerSelectable
-                  ? "grid grid-cols-2 gap-2"
-                  : "grid grid-cols-2 gap-2 opacity-50 pointer-events-none"
-              }
-              aria-disabled={!biomarkerSelectable}
-            >
-              {PDL1_OPTIONS.map((o) => (
-                <Button
-                  key={o.id}
-                  type="button"
-                  variant={pdl1 === o.id ? "default" : "outline"}
-                  size="sm"
-                  className="justify-start"
-                  disabled={!biomarkerSelectable}
-                  onClick={() => setPdl1(o.id)}
-                >
-                  {o.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* 드라이버 유전자 변이 (NSCLC만) */}
           <div className="space-y-2">
             <Label
               className={
@@ -179,7 +146,7 @@ const PatientForm = ({
             <div
               className={
                 biomarkerSelectable
-                  ? "custom-scrollbar grid max-h-48 grid-cols-2 gap-2 overflow-y-auto pr-1"
+                  ? "grid grid-cols-2 gap-2"
                   : "grid grid-cols-2 gap-2 opacity-50 pointer-events-none"
               }
               aria-disabled={!biomarkerSelectable}
@@ -201,6 +168,67 @@ const PatientForm = ({
               ))}
             </div>
           </div>
+
+          {pdl1Ref && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label>{pdl1Ref.title}</Label>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  검사 결과 구간을 누르면, 그때 흔히 논의되는 치료와 생존에 대한
+                  쉬운 설명이 나옵니다.
+                </p>
+                <div
+                  className={
+                    biomarkerSelectable
+                      ? "grid grid-cols-2 gap-2"
+                      : "grid grid-cols-1 gap-2"
+                  }
+                >
+                  {pdl1Ref.tiers.map((t) => (
+                    <Button
+                      key={t.id}
+                      type="button"
+                      variant={activePdl1TierId === t.id ? "default" : "outline"}
+                      size="sm"
+                      className="justify-start"
+                      onClick={() =>
+                        setPdl1TierId((prev) => (prev === t.id ? null : t.id))
+                      }
+                    >
+                      {t.buttonLabel}
+                    </Button>
+                  ))}
+                </div>
+                {selectedPdl1Tier ? (
+                  <div className="space-y-2 rounded-md border border-dashed bg-muted/30 px-3 py-3">
+                    <p className="text-xs font-semibold text-foreground">
+                      {selectedPdl1Tier.range}
+                    </p>
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        어떤 치료를 말하나요?{" "}
+                      </span>
+                      {selectedPdl1Tier.treatment}
+                    </p>
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        생존은 어떻게 이해하면 될까요?{" "}
+                      </span>
+                      {selectedPdl1Tier.survival}
+                    </p>
+                    <p className="text-[10px] leading-relaxed text-muted-foreground/80">
+                      {pdl1Ref.caveat}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground/80">
+                    {pdl1Ref.intro}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </aside>

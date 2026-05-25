@@ -1,4 +1,4 @@
-import { MUTATION_OPTIONS, PDL1_OPTIONS } from '@/constants';
+import { MUTATION_OPTIONS } from '@/constants';
 import { histologyLabel, usesNsclcBiomarkerPanel } from '@/lib/utils';
 import type { PatientProfile } from '@/types';
 
@@ -7,7 +7,7 @@ interface PrintPatientSummaryProps {
 }
 
 const PrintPatientSummary = ({ profile }: PrintPatientSummaryProps) => {
-  const { age, gender, histology, selectedMutations, pdl1 } = profile;
+  const { age, gender, histology, selectedMutations } = profile;
   const showBiomarkers = usesNsclcBiomarkerPanel(histology);
 
   return (
@@ -28,18 +28,12 @@ const PrintPatientSummary = ({ profile }: PrintPatientSummaryProps) => {
           {histologyLabel(histology)}
         </div>
         {showBiomarkers ? (
-          <>
-            <div>
-              <span className="font-medium text-muted-foreground">PD-L1 발현 정도:</span>{' '}
-              {PDL1_OPTIONS.find((o) => o.id === pdl1)?.label}
-            </div>
-            <div className="col-span-2">
-              <span className="font-medium text-muted-foreground">진단된 유전자 동반 변이:</span>{' '}
-              {selectedMutations
-                .map((m) => MUTATION_OPTIONS.find((o) => o.id === m)?.label)
-                .join(', ')}
-            </div>
-          </>
+          <div className="col-span-2">
+            <span className="font-medium text-muted-foreground">진단된 유전자 동반 변이:</span>{' '}
+            {selectedMutations
+              .map((m) => MUTATION_OPTIONS.find((o) => o.id === m)?.label)
+              .join(', ')}
+          </div>
         ) : (
           <div className="col-span-2 text-muted-foreground">
             PD-L1·드라이버 유전자 변이: 소세포폐암 해당 없음

@@ -1,5 +1,11 @@
-import { Globe2, TrendingUp } from "lucide-react";
+import { CircleHelp, Globe2, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/cn";
 import type { SurvivalEstimate } from "@/lib/survival-cbioportal";
 import { getCertaintyLabel } from "@/lib/korean-reference";
 import {
@@ -7,6 +13,37 @@ import {
   buildKmStepPath,
   buildSmoothSvgPath,
 } from "@/lib/survival-curve-path";
+import { getUntreatedEstimateFootnoteParagraphs } from "@/lib/untreated-estimate";
+
+const metaChipClass =
+  "rounded-md border border-border bg-muted/40 text-muted-foreground hover:bg-muted data-[state=open]:bg-muted focus-visible:outline-none focus-visible:ring-0";
+
+const untreatedHelpTooltipClass = cn(
+  "border bg-popover text-popover-foreground shadow-md",
+  "max-w-sm space-y-2 text-[11px] leading-relaxed",
+);
+
+const UntreatedHelpButton = () => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        type="button"
+        className={cn(
+          "flex shrink-0 items-center justify-center p-1",
+          metaChipClass,
+        )}
+        aria-label="미치료 추정 계산 방식"
+      >
+        <CircleHelp className="h-3 w-3" />
+      </button>
+    </TooltipTrigger>
+    <TooltipContent side="bottom" className={untreatedHelpTooltipClass}>
+      {getUntreatedEstimateFootnoteParagraphs().map((p) => (
+        <p key={p}>{p}</p>
+      ))}
+    </TooltipContent>
+  </Tooltip>
+);
 
 interface SurvivalChartProps {
   data: SurvivalEstimate | null;
@@ -62,6 +99,7 @@ const SurvivalChart = ({ data, isLoading }: SurvivalChartProps) => {
               <div className="flex items-center gap-1.5">
                 <div className="h-0.5 w-4 border-t-2 border-dashed border-muted-foreground" />
                 미치료 추정
+                <UntreatedHelpButton />
               </div>
             )}
           </div>
@@ -69,25 +107,25 @@ const SurvivalChart = ({ data, isLoading }: SurvivalChartProps) => {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <p className="text-[10px] text-muted-foreground">
-          치료 코호트는 K-M step 곡선(실제 추정), 미치료는 비교용 부드러운 추정
-          곡선입니다.
+        <p className="text-[10px] leading-relaxed text-muted-foreground">
+          실선 = 치료 코호트 K-M, 점선 = 미치료 모델 추정(물음표 참고).
         </p>
 
-        <div className="relative h-56 w-full pl-8 pr-2">
-          <div className="pointer-events-none absolute left-0 top-0 flex h-full flex-col justify-between text-[10px] font-medium text-muted-foreground">
-            <span>100%</span>
-            <span>75%</span>
-            <span>50%</span>
-            <span>25%</span>
-            <span>0%</span>
-          </div>
+        <div className="w-full py-6 pl-8 pr-2">
+          <div className="relative h-56 w-full">
+            <div className="pointer-events-none absolute left-0 top-0 flex h-full flex-col justify-between text-[10px] font-medium text-muted-foreground">
+              <span>100%</span>
+              <span>75%</span>
+              <span>50%</span>
+              <span>25%</span>
+              <span>0%</span>
+            </div>
 
-          <svg
-            className="h-full w-full overflow-visible"
-            viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-            preserveAspectRatio="none"
-          >
+            <svg
+              className="h-full w-full overflow-visible"
+              viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+              preserveAspectRatio="none"
+            >
             {[0, 25, 50, 75, 100].map((v) => (
               <line
                 key={v}
@@ -146,9 +184,10 @@ const SurvivalChart = ({ data, isLoading }: SurvivalChartProps) => {
                 조건 일치 환자 부족
               </text>
             )}
-          </svg>
+            </svg>
+          </div>
 
-          <div className="absolute -bottom-5 left-8 right-2 flex justify-between text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <div className="mt-4 flex justify-between text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             <span>0</span>
             <span>1년</span>
             <span>2년</span>
@@ -195,11 +234,6 @@ const SurvivalChart = ({ data, isLoading }: SurvivalChartProps) => {
                 </div>
               )}
             </div>
-            {untreated && (
-              <p className="text-[10px] leading-relaxed text-muted-foreground">
-                {untreated.source}
-              </p>
-            )}
           </div>
         )}
 

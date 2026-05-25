@@ -17,11 +17,6 @@ export function usePatientProfile() {
     }
   };
 
-  const setPdl1Guarded = (v: string) => {
-    if (!usesNsclcBiomarkerPanel(histology)) return;
-    setPdl1(v);
-  };
-
   const toggleMutation = (id: string) => {
     if (!usesNsclcBiomarkerPanel(histology)) return;
     if (id === 'none') {
@@ -45,7 +40,6 @@ export function usePatientProfile() {
     setAge,
     setGender,
     setHistology: setHistologyAndResetBiomarkers,
-    setPdl1: setPdl1Guarded,
     toggleMutation,
   };
 }

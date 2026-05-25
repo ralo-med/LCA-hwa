@@ -17,6 +17,10 @@ export interface StudyConfig {
   approxN: number;
 }
 
+export function getCbioportalStudyUrl(studyId: string): string {
+  return `https://www.cbioportal.org/study/summary?id=${encodeURIComponent(studyId)}`;
+}
+
 export function getMutationProfileId(studyId: string): string {
   return `${studyId}_mutations`;
 }

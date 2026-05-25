@@ -56,7 +56,6 @@ const App = () => {
               setAge={patient.setAge}
               setGender={patient.setGender}
               setHistology={patient.setHistology}
-              setPdl1={patient.setPdl1}
               toggleMutation={patient.toggleMutation}
             />
 

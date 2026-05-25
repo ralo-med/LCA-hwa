@@ -59,6 +59,38 @@ const PATIENT_ATTRS = [
   'AJCC_PATHOLOGIC_TUMOR_STAGE',
 ] as const;
 
+export interface CbioStudyMeta {
+  studyId: string;
+  name: string;
+  citation?: string;
+  pmid?: string;
+}
+
+export function pubmedUrl(pmid: string | number): string {
+  return `https://pubmed.ncbi.nlm.nih.gov/${String(pmid)}/`;
+}
+
+export async function fetchStudyMeta(
+  studyId: string,
+): Promise<CbioStudyMeta | null> {
+  try {
+    const data = await fetchJson<{
+      studyId: string;
+      name: string;
+      citation?: string;
+      pmid?: string;
+    }>(`/studies/${studyId}`);
+    return {
+      studyId: data.studyId,
+      name: data.name,
+      citation: data.citation,
+      pmid: data.pmid,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchClinicalData(studyId: string): Promise<ClinicalDatum[]> {
   return fetchJson<ClinicalDatum[]>(
     `/studies/${studyId}/clinical-data?clinicalDataType=PATIENT&pageSize=10000`,

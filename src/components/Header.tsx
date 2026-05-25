@@ -19,7 +19,7 @@ const Header = ({
     <div>
       <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground md:text-3xl">
         <Activity className="h-8 w-8 text-primary" />
-        4병기 폐암 정밀의료 대시보드
+        폐암 정밀의료 대시보드
       </h1>
       <p className="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
         <span className="font-semibold text-foreground">화순전남대학교병원</span>
