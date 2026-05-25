@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TTS_MODEL } from '@/constants';
+import { isGeminiConfigured, TTS_MODEL } from '@/constants';
 import { callGemini, extractInlineData } from '@/lib/gemini';
 import { pcmToWavBlob } from '@/lib/tts';
 
@@ -8,6 +8,7 @@ export function useTTS() {
 
   const play = async (text: string) => {
     if (!text || isPlaying) return;
+    if (!isGeminiConfigured()) return;
     setIsPlaying(true);
     try {
       const cleanText = text.replace(/[#*`]/g, '');

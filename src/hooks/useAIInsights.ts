@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { MUTATION_OPTIONS, TEXT_MODEL } from '@/constants';
-import { callGemini, extractText } from '@/lib/gemini';
+import { isGeminiConfigured, MUTATION_OPTIONS, TEXT_MODEL } from '@/constants';
+import { callGemini, extractText, GEMINI_KEY_MISSING_MSG } from '@/lib/gemini';
 import { histologyLabel, usesNsclcBiomarkerPanel } from '@/lib/utils';
 import type { PatientProfile } from '@/types';
 
@@ -10,6 +10,10 @@ export function useAIInsights() {
   const [errorMsg, setErrorMsg] = useState<string>('');
 
   const generate = async (profile: PatientProfile) => {
+    if (!isGeminiConfigured()) {
+      setErrorMsg(GEMINI_KEY_MISSING_MSG);
+      return;
+    }
     const { age, gender, histology, selectedMutations } = profile;
     setIsGenerating(true);
     setErrorMsg('');

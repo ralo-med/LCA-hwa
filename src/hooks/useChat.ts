@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { TEXT_MODEL } from '@/constants';
-import { callGemini, extractText } from '@/lib/gemini';
+import { isGeminiConfigured, TEXT_MODEL } from '@/constants';
+import { callGemini, extractText, GEMINI_KEY_MISSING_MSG } from '@/lib/gemini';
 import type { ChatMessage, PatientProfile } from '@/types';
 
 export function useChat(profile: PatientProfile) {
@@ -10,6 +10,15 @@ export function useChat(profile: PatientProfile) {
 
   const send = async () => {
     if (!input.trim() || isChatting) return;
+    if (!isGeminiConfigured()) {
+      setHistory((p) => [
+        ...p,
+        { role: 'user', text: input.trim() },
+        { role: 'ai', text: GEMINI_KEY_MISSING_MSG },
+      ]);
+      setInput('');
+      return;
+    }
     const userMsg = input.trim();
     setInput('');
     setHistory((p) => [...p, { role: 'user', text: userMsg }]);

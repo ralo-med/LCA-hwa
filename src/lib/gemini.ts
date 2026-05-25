@@ -1,12 +1,18 @@
-import { API_KEY } from '@/constants';
+import { API_KEY, isGeminiConfigured } from '@/constants';
 
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+export const GEMINI_KEY_MISSING_MSG =
+  'Gemini API 키가 없습니다. 프로젝트 루트 .env 파일에 VITE_GEMINI_API_KEY를 설정한 뒤 개발 서버를 다시 실행해 주세요.';
 
 export async function callGemini(
   endpoint: string,
   payload: Record<string, unknown>,
   retries: number = 5,
 ): Promise<any> {
+  if (!isGeminiConfigured()) {
+    throw new Error('GEMINI_API_KEY_MISSING');
+  }
   const url = `${BASE_URL}/${endpoint}?key=${API_KEY}`;
   for (let i = 0; i <= retries; i++) {
     try {

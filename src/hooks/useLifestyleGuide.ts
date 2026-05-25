@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { TEXT_MODEL } from '@/constants';
-import { callGemini, extractText } from '@/lib/gemini';
+import { isGeminiConfigured, TEXT_MODEL } from '@/constants';
+import { callGemini, extractText, GEMINI_KEY_MISSING_MSG } from '@/lib/gemini';
 import type { PatientProfile } from '@/types';
 
 export function useLifestyleGuide() {
@@ -9,6 +9,10 @@ export function useLifestyleGuide() {
   const [errorMsg, setErrorMsg] = useState<string>('');
 
   const generate = async (profile: PatientProfile) => {
+    if (!isGeminiConfigured()) {
+      setErrorMsg(GEMINI_KEY_MISSING_MSG);
+      return;
+    }
     const { age, gender } = profile;
     setIsGenerating(true);
     setErrorMsg('');

@@ -24,4 +24,12 @@ export const PDL1_OPTIONS: Pdl1Option[] = [
 export const TEXT_MODEL = "gemini-2.5-flash-preview-09-2025";
 export const TTS_MODEL = "gemini-2.5-flash-preview-tts";
 
-export const API_KEY: string = import.meta.env.VITE_GEMINI_API_KEY ?? "";
+export const API_KEY: string =
+  import.meta.env.VITE_GEMINI_API_KEY?.trim() ?? "";
+
+export function isGeminiConfigured(): boolean {
+  const key = API_KEY;
+  if (!key) return false;
+  if (/^your_/i.test(key) || key.includes("your_gemini")) return false;
+  return true;
+}
