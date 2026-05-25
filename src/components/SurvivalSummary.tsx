@@ -1,8 +1,20 @@
-import { Activity, AlertTriangle, Clock, Database, Globe2, Info, Library } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { SurvivalEstimate } from '@/lib/survival-cbioportal';
+import {
+  Activity,
+  AlertTriangle,
+  Clock,
+  Database,
+  Globe2,
+  Info,
+  Library,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { SurvivalEstimate } from "@/lib/survival-cbioportal";
 
 interface SurvivalSummaryProps {
   data: SurvivalEstimate | null;
@@ -15,7 +27,7 @@ const Skeleton = () => (
 );
 
 const fmtPct = (v: number | null | undefined) =>
-  v === null || v === undefined ? '—' : v.toFixed(1);
+  v === null || v === undefined ? "—" : v.toFixed(1);
 
 const SurvivalSummary = ({ data, isLoading, error }: SurvivalSummaryProps) => {
   const showSkeleton = isLoading && !data;
@@ -40,12 +52,13 @@ const SurvivalSummary = ({ data, isLoading, error }: SurvivalSummaryProps) => {
                 <div className="text-5xl font-bold tracking-tight text-foreground">
                   {fmtPct(year5)}
                   <span className="ml-1 text-2xl font-medium text-muted-foreground">
-                    {year5 !== null ? '%' : ''}
+                    {year5 !== null ? "%" : ""}
                   </span>
                 </div>
                 {data?.ci95Year5 && (
                   <p className="text-xs text-muted-foreground">
-                    95% CI {data.ci95Year5[0].toFixed(1)}% ~ {data.ci95Year5[1].toFixed(1)}%
+                    95% CI {data.ci95Year5[0].toFixed(1)}% ~{" "}
+                    {data.ci95Year5[1].toFixed(1)}%
                   </p>
                 )}
                 {year5 === null && data && !noData && (
@@ -76,15 +89,17 @@ const SurvivalSummary = ({ data, isLoading, error }: SurvivalSummaryProps) => {
             ) : (
               <>
                 <div className="text-5xl font-bold tracking-tight text-foreground">
-                  {median !== null && median !== undefined ? median.toFixed(1) : '—'}
+                  {median !== null && median !== undefined
+                    ? median.toFixed(1)
+                    : "—"}
                   <span className="ml-1 text-2xl font-medium text-muted-foreground">
-                    {median !== null && median !== undefined ? '년' : ''}
+                    {median !== null && median !== undefined ? "년" : ""}
                   </span>
                 </div>
                 <p className="text-[11px] font-medium text-muted-foreground">
                   {median === null
-                    ? '추적 기간 내 50% 미도달 또는 데이터 없음'
-                    : '코호트 절반 사망 시점'}
+                    ? "추적 기간 내 50% 미도달 또는 데이터 없음"
+                    : "코호트 절반 사망 시점"}
                 </p>
               </>
             )}
@@ -97,10 +112,10 @@ const SurvivalSummary = ({ data, isLoading, error }: SurvivalSummaryProps) => {
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
           <div>
             <div className="font-semibold text-amber-700 dark:text-amber-300">
-              {data.unavailableReason ?? '추정 불가'}
+              {data.unavailableReason ?? "추정 불가"}
             </div>
             <div className="mt-0.5 text-muted-foreground">
-              임의 추정치를 표시하지 않습니다. 환자 단위 공개 데이터에서 매칭되는 코호트가 없습니다.
+              조건에 맞는 환자가 5명 미만입니다.
             </div>
           </div>
         </div>
@@ -120,9 +135,8 @@ const SurvivalSummary = ({ data, isLoading, error }: SurvivalSummaryProps) => {
             </TooltipContent>
           </Tooltip>
 
-          <Badge variant={data.insufficient ? 'destructive' : 'secondary'}>
+          <Badge variant={data.insufficient ? "destructive" : "secondary"}>
             n = {data.cohortN}
-            {data.totalN > 0 && ` / ${data.totalN}`}
           </Badge>
 
           <Tooltip>
@@ -132,12 +146,16 @@ const SurvivalSummary = ({ data, isLoading, error }: SurvivalSummaryProps) => {
               </Badge>
             </TooltipTrigger>
             <TooltipContent>
-              {data.ageBand[0]}–{data.ageBand[1]}세(연령대)·성별·변이 조건을 모두 만족하는 환자만 집계합니다.
+              {data.ageBand[0]}–{data.ageBand[1]}세(연령대)·성별·변이 조건을
+              모두 만족하는 환자만 집계합니다.
             </TooltipContent>
           </Tooltip>
 
           {data.hasAsianCohort && (
-            <Badge variant="outline" className="border-chart-2/40 bg-chart-2/10 text-chart-2">
+            <Badge
+              variant="outline"
+              className="border-chart-2/40 bg-chart-2/10 text-chart-2"
+            >
               <Globe2 className="mr-1 h-3 w-3" /> 아시아 코호트 포함
             </Badge>
           )}
@@ -147,7 +165,9 @@ const SurvivalSummary = ({ data, isLoading, error }: SurvivalSummaryProps) => {
               <TooltipTrigger asChild>
                 <div className="flex cursor-help items-center gap-1.5 rounded-md border bg-muted/40 px-2 py-1">
                   <Library className="h-3 w-3" />
-                  <span className="font-medium">기여 연구 {data.contributingStudies.length}건</span>
+                  <span className="font-medium">
+                    기여 연구 {data.contributingStudies.length}건
+                  </span>
                 </div>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm">
@@ -156,11 +176,9 @@ const SurvivalSummary = ({ data, isLoading, error }: SurvivalSummaryProps) => {
                     <div key={c.studyId} className="flex justify-between gap-3">
                       <div>
                         <div className="font-semibold">{c.label}</div>
-                        <div className="text-muted-foreground">{c.citation} · {c.population}</div>
+                        <div className="text-muted-foreground">{c.citation}</div>
                       </div>
-                      <div className="whitespace-nowrap font-mono">
-                        n={c.n}<span className="text-muted-foreground">/{c.totalN}</span>
-                      </div>
+                      <div className="whitespace-nowrap font-mono">n={c.n}</div>
                     </div>
                   ))}
                 </div>

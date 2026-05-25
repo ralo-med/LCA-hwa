@@ -199,7 +199,10 @@ const LUSC_STUDIES: StudyConfig[] = [
   },
 ];
 
-/** Small Cell Lung Cancer (cBioPortal SCLC 목록) */
+/**
+ * Small Cell Lung Cancer — cBioPortal에 OS_MONTHS/OS_STATUS가 있는 연구만.
+ * (JHU·CLCGP는 게놈만 있고 생존 임상데이터 없음)
+ */
 const SCLC_STUDIES: StudyConfig[] = [
   {
     studyId: "sclc_ucologne_2015",
@@ -207,20 +210,6 @@ const SCLC_STUDIES: StudyConfig[] = [
     citation: "George et al. Nature 2015",
     population: "Western",
     approxN: 120,
-  },
-  {
-    studyId: "sclc_jhu",
-    label: "Johns Hopkins SCLC",
-    citation: "Peifer et al. Nat Genet 2012",
-    population: "Western",
-    approxN: 80,
-  },
-  {
-    studyId: "sclc_clcgp",
-    label: "CLCGP SCLC",
-    citation: "Rudin et al. Nat Genet 2012",
-    population: "Western",
-    approxN: 29,
   },
   {
     studyId: "sclc_cancercell_gardner_2017",

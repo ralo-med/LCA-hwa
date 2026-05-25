@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Gender, Histology, PatientProfile } from '@/types';
+import { usesNsclcBiomarkerPanel } from '@/lib/utils';
 
 export function usePatientProfile() {
   const [age, setAge] = useState<number>(60);
@@ -8,7 +9,21 @@ export function usePatientProfile() {
   const [selectedMutations, setSelectedMutations] = useState<string[]>(['none']);
   const [pdl1, setPdl1] = useState<string>('unknown');
 
+  const setHistologyAndResetBiomarkers = (h: Histology) => {
+    setHistology(h);
+    if (!usesNsclcBiomarkerPanel(h)) {
+      setSelectedMutations(['none']);
+      setPdl1('unknown');
+    }
+  };
+
+  const setPdl1Guarded = (v: string) => {
+    if (!usesNsclcBiomarkerPanel(histology)) return;
+    setPdl1(v);
+  };
+
   const toggleMutation = (id: string) => {
+    if (!usesNsclcBiomarkerPanel(histology)) return;
     if (id === 'none') {
       setSelectedMutations(['none']);
       return;
@@ -29,8 +44,8 @@ export function usePatientProfile() {
     profile,
     setAge,
     setGender,
-    setHistology,
-    setPdl1,
+    setHistology: setHistologyAndResetBiomarkers,
+    setPdl1: setPdl1Guarded,
     toggleMutation,
   };
 }
