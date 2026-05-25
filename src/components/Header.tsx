@@ -19,11 +19,11 @@ const Header = ({
     <div>
       <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground md:text-3xl">
         <img
-          src="/hwasun-hospital-logo.png"
+          src="/logo.png"
           alt="화순전남대학교병원"
-          width={44}
-          height={44}
-          className="h-10 w-10 shrink-0 rounded-full object-contain md:h-11 md:w-11"
+          width={80}
+          height={80}
+          className="h-16 w-16 shrink-0 object-contain md:h-20 md:w-20"
         />
         폐암 정밀의료 대시보드
       </h1>
