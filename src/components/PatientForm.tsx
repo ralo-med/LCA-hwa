@@ -146,8 +146,8 @@ const PatientForm = ({
             <div
               className={
                 biomarkerSelectable
-                  ? "grid grid-cols-2 gap-2"
-                  : "grid grid-cols-2 gap-2 opacity-50 pointer-events-none"
+                  ? "grid min-w-0 grid-cols-2 gap-2"
+                  : "grid min-w-0 grid-cols-2 gap-2 opacity-50 pointer-events-none"
               }
               aria-disabled={!biomarkerSelectable}
             >
@@ -159,7 +159,7 @@ const PatientForm = ({
                     selectedMutations.includes(m.id) ? "default" : "outline"
                   }
                   size="sm"
-                  className="justify-start text-[11px]"
+                  className="min-w-0 w-full justify-start px-1.5 text-[10px] leading-tight"
                   disabled={!biomarkerSelectable}
                   onClick={() => toggleMutation(m.id)}
                 >
