@@ -1,4 +1,4 @@
-import type { Histology } from '../types';
+import type { Histology } from '@/types';
 
 export async function copyToClipboard(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) {

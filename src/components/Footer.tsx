@@ -1,6 +1,6 @@
 const Footer = () => (
-  <footer className="mt-16 text-center text-slate-400 text-xs no-print pb-20 border-t border-slate-200 pt-8">
-    <p className="font-bold">
+  <footer className="no-print mt-16 border-t pb-20 pt-8 text-center text-xs text-muted-foreground">
+    <p className="font-semibold">
       © 2026 화순전남대학교병원 폐암 정밀의료 플랫폼 | 환자 맞춤형 항암 교육 대시보드
     </p>
     <p className="mt-1">

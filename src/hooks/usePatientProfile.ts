@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react';
-import type { Gender, Histology, PatientProfile } from '../types';
+import type { Gender, Histology, PatientProfile } from '@/types';
 
 export function usePatientProfile() {
-  const [age, setAge] = useState<number>(65);
+  const [age, setAge] = useState<number>(60);
   const [gender, setGender] = useState<Gender>('female');
   const [histology, setHistology] = useState<Histology>('adenocarcinoma');
   const [selectedMutations, setSelectedMutations] = useState<string[]>(['none']);
   const [pdl1, setPdl1] = useState<string>('unknown');
-  const [isTreated, setIsTreated] = useState<boolean>(true);
 
   const toggleMutation = (id: string) => {
     if (id === 'none') {
@@ -22,8 +21,8 @@ export function usePatientProfile() {
   };
 
   const profile = useMemo<PatientProfile>(
-    () => ({ age, gender, histology, selectedMutations, pdl1, isTreated }),
-    [age, gender, histology, selectedMutations, pdl1, isTreated],
+    () => ({ age, gender, histology, selectedMutations, pdl1 }),
+    [age, gender, histology, selectedMutations, pdl1],
   );
 
   return {
@@ -32,7 +31,6 @@ export function usePatientProfile() {
     setGender,
     setHistology,
     setPdl1,
-    setIsTreated,
     toggleMutation,
   };
 }

@@ -1,6 +1,10 @@
-import { useState } from 'react';
 import { Check, Copy, Download, FileText, Loader2, Printer, Volume2 } from 'lucide-react';
-import { copyToClipboard, saveTextFile, triggerPrint } from '../lib/utils';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { copyToClipboard, saveTextFile, triggerPrint } from '@/lib/utils';
 
 interface ReportCardProps {
   text: string;
@@ -15,68 +19,85 @@ const ReportCard = ({ text, isLoading, isPlayingAudio, onPlayAudio }: ReportCard
   const handleCopy = async () => {
     await copyToClipboard(text);
     setCopied(true);
+    toast.success('소견서가 클립보드에 복사되었습니다.');
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="bg-white border-l-8 border-l-blue-600 rounded-3xl shadow-md overflow-hidden card border border-slate-100">
-      <div className="p-6 md:p-8">
-        <div className="flex items-center justify-between mb-6 no-print border-b pb-4">
-          <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-            <FileText size={22} className="text-blue-600" /> 화순전남대학교병원 전문의 소견서
-          </h3>
-          <div className="flex gap-2">
-            <button
-              onClick={onPlayAudio}
-              disabled={isPlayingAudio}
-              className="p-2.5 bg-slate-50 hover:bg-blue-50 rounded-xl text-slate-600 hover:text-blue-600 transition-all border border-slate-200"
-              title="음성 소견 듣기"
-            >
-              {isPlayingAudio ? <Loader2 className="animate-spin text-blue-600" size={18} /> : <Volume2 size={18} />}
-            </button>
+    <Card className="overflow-hidden border-l-4 border-l-primary">
+      <CardHeader className="no-print flex flex-row items-center justify-between space-y-0 border-b pb-4">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <FileText className="h-5 w-5 text-primary" />
+          전문의 소견서
+        </CardTitle>
+        <div className="flex gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onPlayAudio}
+                disabled={isPlayingAudio}
+                aria-label="음성 소견 듣기"
+              >
+                {isPlayingAudio ? <Loader2 className="animate-spin" /> : <Volume2 />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>음성으로 듣기</TooltipContent>
+          </Tooltip>
 
-            <button
-              onClick={handleCopy}
-              className="p-2.5 bg-slate-50 hover:bg-indigo-50 rounded-xl text-slate-600 hover:text-indigo-600 transition-all border border-slate-200"
-              title="텍스트 복사"
-            >
-              {copied ? <Check className="text-green-600" size={18} /> : <Copy size={18} />}
-            </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={handleCopy} aria-label="복사">
+                {copied ? <Check className="text-primary" /> : <Copy />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>텍스트 복사</TooltipContent>
+          </Tooltip>
 
-            <button
-              onClick={() => saveTextFile(text, '화순전남대병원_폐암_정밀의학_소견서.txt')}
-              className="p-2.5 bg-slate-50 hover:bg-emerald-50 rounded-xl text-slate-600 hover:text-emerald-600 transition-all border border-slate-200"
-              title="메모장 파일로 저장"
-            >
-              <Download size={18} />
-            </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => saveTextFile(text, '화순전남대병원_폐암_정밀의학_소견서.txt')}
+                aria-label="저장"
+              >
+                <Download />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>파일로 저장</TooltipContent>
+          </Tooltip>
 
-            <button
-              onClick={triggerPrint}
-              className="p-2.5 bg-slate-50 hover:bg-slate-200 rounded-xl text-slate-600 hover:text-slate-900 transition-all border border-slate-200"
-              title="인쇄 전용 모드"
-            >
-              <Printer size={18} />
-            </button>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={triggerPrint} aria-label="인쇄">
+                <Printer />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>인쇄 / PDF 저장</TooltipContent>
+          </Tooltip>
         </div>
+      </CardHeader>
 
-        <div className="hidden print:block mb-4 pb-2 border-b font-bold text-slate-700">
+      <CardContent className="pt-6">
+        <div className="mb-4 hidden border-b pb-2 font-bold text-foreground print:block">
           전문의 소견 요약 및 설명
         </div>
 
         {isLoading ? (
-          <div className="space-y-3 animate-pulse">
-            <div className="h-5 bg-slate-100 w-full rounded"></div>
-            <div className="h-5 bg-slate-100 w-5/6 rounded"></div>
+          <div className="space-y-3">
+            <div className="h-4 w-full animate-pulse rounded bg-muted" />
+            <div className="h-4 w-5/6 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-4/6 animate-pulse rounded bg-muted" />
           </div>
         ) : (
-          <div className="text-slate-800 text-lg md:text-xl font-medium leading-loose tracking-wide whitespace-pre-wrap font-sans">
+          <div className="whitespace-pre-wrap text-base leading-relaxed text-foreground md:text-lg">
             {text}
           </div>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

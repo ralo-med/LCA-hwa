@@ -1,6 +1,10 @@
-import { useEffect, useRef, type FormEvent } from 'react';
+import { type FormEvent, useEffect, useRef } from 'react';
 import { MessageSquare, Send } from 'lucide-react';
-import type { ChatMessage } from '../types';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/cn';
+import type { ChatMessage } from '@/types';
 
 interface ChatPanelProps {
   history: ChatMessage[];
@@ -23,51 +27,52 @@ const ChatPanel = ({ history, input, setInput, onSend, isChatting }: ChatPanelPr
   };
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-indigo-50/50 border-2 border-indigo-100 rounded-3xl p-6 no-print shadow-sm">
-      <h3 className="font-extrabold text-slate-800 flex items-center gap-2 mb-4">
-        <MessageSquare size={20} className="text-blue-600" />
-        ✨ 전문의 실시간 Q&amp;A 챗봇
-      </h3>
+    <Card className="no-print">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <MessageSquare className="h-5 w-5 text-primary" />
+          전문의 실시간 Q&amp;A 챗봇
+        </CardTitle>
+      </CardHeader>
 
-      <div className="bg-white rounded-2xl border border-slate-200 h-56 overflow-y-auto p-4 space-y-4 mb-3 custom-scrollbar shadow-inner">
-        {history.length === 0 && (
-          <p className="text-center text-slate-400 text-sm py-10 font-medium">
-            리포트와 소견에 대해 추가적으로 궁금하신 점을 물어보세요. (예: 약물 부작용 관리법, 음식 주의사항 등)
-          </p>
-        )}
-        {history.map((c, i) => (
-          <div key={i} className={`flex ${c.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className={`p-3 rounded-2xl text-sm leading-relaxed ${
-                c.role === 'user'
-                  ? 'bg-blue-600 text-white rounded-tr-none font-bold'
-                  : 'bg-slate-100 text-slate-800 rounded-tl-none font-medium shadow-sm'
-              }`}
-            >
-              {c.text}
+      <CardContent className="space-y-3">
+        <div className="custom-scrollbar h-56 space-y-3 overflow-y-auto rounded-lg border bg-muted/30 p-4">
+          {history.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              리포트와 소견에 대해 추가로 궁금하신 점을 물어보세요.
+              <br />
+              (예: 약물 부작용 관리법, 음식 주의사항 등)
+            </p>
+          )}
+          {history.map((c, i) => (
+            <div key={i} className={cn('flex', c.role === 'user' ? 'justify-end' : 'justify-start')}>
+              <div
+                className={cn(
+                  'max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed',
+                  c.role === 'user'
+                    ? 'rounded-tr-none bg-primary text-primary-foreground'
+                    : 'rounded-tl-none border bg-background text-foreground',
+                )}
+              >
+                {c.text}
+              </div>
             </div>
-          </div>
-        ))}
-        <div ref={endRef} />
-      </div>
+          ))}
+          <div ref={endRef} />
+        </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="질문을 구체적으로 기입해 주세요..."
-          className="flex-1 bg-white border border-slate-300 rounded-2xl px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
-        />
-        <button
-          type="submit"
-          disabled={isChatting || !input.trim()}
-          className="bg-blue-600 text-white px-5 rounded-2xl hover:bg-blue-700 disabled:opacity-50 active:scale-95 transition-all shadow-md"
-        >
-          <Send size={18} />
-        </button>
-      </form>
-    </div>
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="질문을 구체적으로 기입해 주세요..."
+          />
+          <Button type="submit" disabled={isChatting || !input.trim()} size="icon" aria-label="전송">
+            <Send />
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 

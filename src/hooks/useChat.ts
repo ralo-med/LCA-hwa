@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { TEXT_MODEL } from '../constants';
-import { callGemini, extractText } from '../lib/gemini';
-import type { ChatMessage, PatientProfile } from '../types';
+import { TEXT_MODEL } from '@/constants';
+import { callGemini, extractText } from '@/lib/gemini';
+import type { ChatMessage, PatientProfile } from '@/types';
 
 export function useChat(profile: PatientProfile) {
   const [history, setHistory] = useState<ChatMessage[]>([]);

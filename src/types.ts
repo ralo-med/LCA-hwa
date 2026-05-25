@@ -32,5 +32,4 @@ export interface PatientProfile {
   histology: Histology;
   selectedMutations: string[];
   pdl1: string;
-  isTreated: boolean;
 }

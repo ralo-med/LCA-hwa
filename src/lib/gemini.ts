@@ -1,4 +1,4 @@
-import { API_KEY } from '../constants';
+import { API_KEY } from '@/constants';
 
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 

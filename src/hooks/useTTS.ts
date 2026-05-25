@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { TTS_MODEL } from '../constants';
-import { callGemini, extractInlineData } from '../lib/gemini';
-import { pcmToWavBlob } from '../lib/tts';
+import { TTS_MODEL } from '@/constants';
+import { callGemini, extractInlineData } from '@/lib/gemini';
+import { pcmToWavBlob } from '@/lib/tts';
 
 export function useTTS() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);

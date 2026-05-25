@@ -1,95 +1,242 @@
-import { TrendingUp } from 'lucide-react';
-import type { SurvivalResult } from '../types';
+import { Globe2, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { SurvivalEstimate } from "@/lib/survival-cbioportal";
+import { getCertaintyLabel } from "@/lib/korean-reference";
+import {
+  buildKmStepCiBand,
+  buildKmStepPath,
+  buildSmoothSvgPath,
+} from "@/lib/survival-curve-path";
 
 interface SurvivalChartProps {
-  survival: SurvivalResult;
-  isTreated: boolean;
+  data: SurvivalEstimate | null;
+  isLoading: boolean;
 }
 
-const SurvivalChart = ({ survival, isTreated }: SurvivalChartProps) => {
-  const stroke = isTreated ? '#2563eb' : '#94a3b8';
-  const points = [
-    { x: 0, y: 100 },
-    { x: 1 / 5, y: survival.year1 },
-    { x: 3 / 5, y: survival.year3 },
-    { x: 1, y: survival.year5 },
-  ];
+const VIEW_W = 500;
+const VIEW_H = 100;
+const MAX_MONTHS = 60;
+
+const fmtPct = (v: number | null | undefined) =>
+  v === null || v === undefined ? "—" : `${v.toFixed(0)}%`;
+
+const SurvivalChart = ({ data, isLoading }: SurvivalChartProps) => {
+  const stroke = "hsl(var(--primary))";
+  const curve = data?.curve ?? [];
+  const hasData = curve.length > 0;
+  const korean = data?.koreanReference;
+  const untreated = data?.untreatedEstimate;
+
+  const treatedPath = hasData
+    ? buildKmStepPath(curve, VIEW_W, VIEW_H, MAX_MONTHS)
+    : "";
+
+  const ciBand = hasData
+    ? buildKmStepCiBand(curve, VIEW_W, VIEW_H, MAX_MONTHS)
+    : "";
+
+  const untreatedPath = untreated
+    ? buildSmoothSvgPath(untreated.points, VIEW_W, VIEW_H, MAX_MONTHS)
+    : "";
+
+  const showTreated = treatedPath.length > 0;
 
   return (
-    <div className="bg-white p-6 rounded-3xl shadow-md border border-slate-100 no-print">
-      <div className="flex items-center justify-between mb-8 border-b pb-3">
-        <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-          <TrendingUp size={18} className="text-indigo-500" />
-          연도별 생존 시뮬레이션 곡선
-        </h3>
-        <div className="flex gap-4 text-[10px] font-extrabold text-slate-500">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 bg-blue-600 rounded-full"></div>현재 프로필 치료군
+    <Card className="no-print">
+      <CardHeader className="pb-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            Kaplan-Meier 생존 곡선
+          </CardTitle>
+          <div className="flex flex-wrap gap-3 text-[11px] font-medium text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <div className="h-0.5 w-4 rounded-full bg-primary" />
+              치료 코호트 K-M
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-3 rounded-sm bg-primary/20" />
+              95% CI
+            </div>
+            {untreatedPath && (
+              <div className="flex items-center gap-1.5">
+                <div className="h-0.5 w-4 border-t-2 border-dashed border-muted-foreground" />
+                미치료 추정
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 bg-slate-300 rounded-full"></div>대조군 (비치료 보존 요법)
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        <p className="text-[10px] text-muted-foreground">
+          치료 코호트는 K-M step 곡선(실제 추정), 미치료는 비교용 부드러운 추정
+          곡선입니다.
+        </p>
+
+        <div className="relative h-56 w-full pl-8 pr-2">
+          <div className="pointer-events-none absolute left-0 top-0 flex h-full flex-col justify-between text-[10px] font-medium text-muted-foreground">
+            <span>100%</span>
+            <span>75%</span>
+            <span>50%</span>
+            <span>25%</span>
+            <span>0%</span>
+          </div>
+
+          <svg
+            className="h-full w-full overflow-visible"
+            viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+            preserveAspectRatio="none"
+          >
+            {[0, 25, 50, 75, 100].map((v) => (
+              <line
+                key={v}
+                x1="0"
+                y1={v}
+                x2={VIEW_W}
+                y2={v}
+                stroke="hsl(var(--border))"
+                strokeWidth="0.6"
+                strokeDasharray="2,3"
+              />
+            ))}
+
+            {ciBand && (
+              <path
+                d={ciBand}
+                fill={stroke}
+                opacity={isLoading ? 0.05 : 0.12}
+              />
+            )}
+
+            {untreatedPath && (
+              <path
+                d={untreatedPath}
+                fill="none"
+                stroke="hsl(var(--muted-foreground))"
+                strokeWidth="2"
+                strokeDasharray="6,4"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+                opacity={isLoading ? 0.25 : 0.75}
+              />
+            )}
+
+            {showTreated && (
+              <path
+                d={treatedPath}
+                fill="none"
+                stroke={stroke}
+                strokeWidth="2.5"
+                strokeLinejoin="miter"
+                vectorEffect="non-scaling-stroke"
+                opacity={isLoading ? 0.3 : 1}
+              />
+            )}
+
+            {!showTreated && !isLoading && (
+              <text
+                x={VIEW_W / 2}
+                y={VIEW_H / 2}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="hsl(var(--muted-foreground))"
+                fontSize="6"
+              >
+                조건 일치 환자 부족
+              </text>
+            )}
+          </svg>
+
+          <div className="absolute -bottom-5 left-8 right-2 flex justify-between text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            <span>0</span>
+            <span>1년</span>
+            <span>2년</span>
+            <span>3년</span>
+            <span>4년</span>
+            <span>5년</span>
           </div>
         </div>
-      </div>
 
-      <div className="relative h-56 w-full px-6 mb-4">
-        <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-slate-400 font-bold pointer-events-none">
-          <span>100%</span>
-          <span>75%</span>
-          <span>50%</span>
-          <span>25%</span>
-          <span>0%</span>
-        </div>
+        {showTreated && (
+          <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              5년 생존율 (K-M)
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <span className="w-24 shrink-0 text-xs font-medium">
+                  치료 코호트
+                </span>
+                <div className="relative h-6 flex-1 overflow-hidden rounded-sm bg-muted">
+                  <div
+                    className="h-full rounded-sm bg-primary transition-all duration-700"
+                    style={{ width: `${Math.min(100, data?.year5 ?? 0)}%` }}
+                  />
+                </div>
+                <span className="w-12 text-right font-mono text-sm font-bold">
+                  {fmtPct(data?.year5 ?? null)}
+                </span>
+              </div>
+              {untreated && (
+                <div className="flex items-center gap-3">
+                  <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">
+                    미치료 추정
+                  </span>
+                  <div className="relative h-6 flex-1 overflow-hidden rounded-sm bg-muted">
+                    <div
+                      className="h-full rounded-sm bg-muted-foreground/50 transition-all duration-700"
+                      style={{ width: `${Math.min(100, untreated.year5)}%` }}
+                    />
+                  </div>
+                  <span className="w-12 text-right font-mono text-sm text-muted-foreground">
+                    {untreated.year5.toFixed(1)}%
+                  </span>
+                </div>
+              )}
+            </div>
+            {untreated && (
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                {untreated.source}
+              </p>
+            )}
+          </div>
+        )}
 
-        <svg className="w-full h-full overflow-visible" viewBox="0 0 500 100" preserveAspectRatio="none">
-          {[0, 25, 50, 75, 100].map((v) => (
-            <line key={v} x1="0" y1={v} x2="500" y2={v} stroke="#f1f5f9" strokeWidth="1.5" />
-          ))}
-
-          <path
-            d={`M 0,0 L ${500 * (1 / 5)},${100 - 15} L ${500 * (3 / 5)},${100 - 5} L 500,${100 - 1.2}`}
-            fill="none"
-            stroke="#cbd5e1"
-            strokeWidth="2.5"
-            strokeDasharray="5,5"
-          />
-
-          <path
-            d={`M 0,0 
-                L ${500 * (1 / 5)},${100 - survival.year1} 
-                L ${500 * (3 / 5)},${100 - survival.year3} 
-                L 500,${100 - survival.year5}`}
-            fill="none"
-            stroke={stroke}
-            strokeWidth="5.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="transition-all duration-1000"
-          />
-
-          {points.map((p, i) => (
-            <circle
-              key={i}
-              cx={p.x * 500}
-              cy={100 - p.y}
-              r="5.5"
-              fill="white"
-              stroke={stroke}
-              strokeWidth="3"
-            />
-          ))}
-        </svg>
-
-        <div className="absolute left-6 -bottom-6 w-full flex justify-between text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">
-          <span>진단</span>
-          <span>1년</span>
-          <span>2년</span>
-          <span>3년</span>
-          <span>4년</span>
-          <span>5년</span>
-        </div>
-      </div>
-    </div>
+        {korean && (
+          <div className="flex items-start gap-2 rounded-md border border-chart-3/30 bg-chart-3/5 px-3 py-2 text-xs">
+            <Globe2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-chart-3" />
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-chart-3">
+                  한국 5년 상대생존율 참고
+                </span>
+                <span className="font-mono font-bold text-foreground">
+                  {korean.year5.toFixed(1)}%
+                </span>
+                <span
+                  className={
+                    korean.certainty === "estimated"
+                      ? "rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400"
+                      : "rounded bg-chart-3/15 px-1.5 py-0.5 text-[10px] font-medium text-chart-3"
+                  }
+                >
+                  {getCertaintyLabel(korean.certainty)}
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                {korean.source}
+              </p>
+              {korean.note && (
+                <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
+                  {korean.note} · K-M 코호트와 직접 비교되지 않습니다
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
