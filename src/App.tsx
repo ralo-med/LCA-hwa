@@ -18,9 +18,11 @@ import { useLifestyleGuide } from '@/hooks/useLifestyleGuide';
 import { usePatientProfile } from '@/hooks/usePatientProfile';
 import { useSurvival } from '@/hooks/useSurvival';
 import { useTTS } from '@/hooks/useTTS';
+import { isGeminiConfigured } from '@/constants';
 import { generateIssueNumber } from '@/lib/utils';
 
 const App = () => {
+  const geminiReady = isGeminiConfigured();
   const patient = usePatientProfile();
   const { profile } = patient;
 
@@ -40,6 +42,7 @@ const App = () => {
       <div className="min-h-screen bg-background text-foreground transition-colors print:bg-white">
         <div className="mx-auto max-w-6xl p-4 md:p-8">
           <Header
+            geminiReady={geminiReady}
             onGenerateInsights={() => insights.generate(profile)}
             onGenerateGuide={() => lifestyle.generate(profile)}
             isGeneratingInsights={insights.isGenerating}
@@ -72,6 +75,7 @@ const App = () => {
                   text={insights.response}
                   isLoading={insights.isGenerating}
                   isPlayingAudio={tts.isPlaying}
+                  geminiReady={geminiReady}
                   onPlayAudio={() => tts.play(insights.response)}
                 />
               )}
@@ -87,6 +91,7 @@ const App = () => {
                   setInput={chat.setInput}
                   onSend={chat.send}
                   isChatting={chat.isChatting}
+                  geminiReady={geminiReady}
                 />
               )}
 

@@ -1,6 +1,11 @@
 import { useState } from 'react';
-import { isGeminiConfigured, TEXT_MODEL } from '@/constants';
-import { callGemini, extractText, GEMINI_KEY_MISSING_MSG } from '@/lib/gemini';
+import { TEXT_MODEL } from '@/constants';
+import {
+  callGemini,
+  extractText,
+  GEMINI_KEY_MISSING_MSG,
+  GeminiNotConfiguredError,
+} from '@/lib/gemini';
 import type { ChatMessage, PatientProfile } from '@/types';
 
 export function useChat(profile: PatientProfile) {
@@ -10,15 +15,6 @@ export function useChat(profile: PatientProfile) {
 
   const send = async () => {
     if (!input.trim() || isChatting) return;
-    if (!isGeminiConfigured()) {
-      setHistory((p) => [
-        ...p,
-        { role: 'user', text: input.trim() },
-        { role: 'ai', text: GEMINI_KEY_MISSING_MSG },
-      ]);
-      setInput('');
-      return;
-    }
     const userMsg = input.trim();
     setInput('');
     setHistory((p) => [...p, { role: 'user', text: userMsg }]);
@@ -35,8 +31,17 @@ export function useChat(profile: PatientProfile) {
         ...p,
         { role: 'ai', text: extractText(data) || '답변을 생성하지 못했습니다.' },
       ]);
-    } catch {
-      setHistory((p) => [...p, { role: 'ai', text: '통신 오류가 발생했습니다.' }]);
+    } catch (err) {
+      setHistory((p) => [
+        ...p,
+        {
+          role: 'ai',
+          text:
+            err instanceof GeminiNotConfiguredError
+              ? GEMINI_KEY_MISSING_MSG
+              : '통신 오류가 발생했습니다.',
+        },
+      ]);
     } finally {
       setIsChatting(false);
     }

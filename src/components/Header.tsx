@@ -1,10 +1,10 @@
 import { HeartPulse, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { isGeminiConfigured } from '@/constants';
 import { GEMINI_KEY_MISSING_MSG } from '@/lib/gemini';
 
 interface HeaderProps {
+  geminiReady: boolean;
   onGenerateInsights: () => void;
   onGenerateGuide: () => void;
   isGeneratingInsights: boolean;
@@ -12,12 +12,12 @@ interface HeaderProps {
 }
 
 const Header = ({
+  geminiReady,
   onGenerateInsights,
   onGenerateGuide,
   isGeneratingInsights,
   isGeneratingGuide,
 }: HeaderProps) => {
-  const geminiReady = isGeminiConfigured();
   const aiDisabledTitle = geminiReady ? undefined : GEMINI_KEY_MISSING_MSG;
 
   return (

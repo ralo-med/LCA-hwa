@@ -12,9 +12,17 @@ interface ChatPanelProps {
   setInput: (v: string) => void;
   onSend: () => void;
   isChatting: boolean;
+  geminiReady: boolean;
 }
 
-const ChatPanel = ({ history, input, setInput, onSend, isChatting }: ChatPanelProps) => {
+const ChatPanel = ({
+  history,
+  input,
+  setInput,
+  onSend,
+  isChatting,
+  geminiReady,
+}: ChatPanelProps) => {
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -66,8 +74,14 @@ const ChatPanel = ({ history, input, setInput, onSend, isChatting }: ChatPanelPr
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="질문을 구체적으로 기입해 주세요..."
+            disabled={!geminiReady}
           />
-          <Button type="submit" disabled={isChatting || !input.trim()} size="icon" aria-label="전송">
+          <Button
+            type="submit"
+            disabled={!geminiReady || isChatting || !input.trim()}
+            size="icon"
+            aria-label="전송"
+          >
             <Send />
           </Button>
         </form>

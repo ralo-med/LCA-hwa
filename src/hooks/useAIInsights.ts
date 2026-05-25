@@ -1,6 +1,11 @@
 import { useState } from 'react';
-import { isGeminiConfigured, MUTATION_OPTIONS, TEXT_MODEL } from '@/constants';
-import { callGemini, extractText, GEMINI_KEY_MISSING_MSG } from '@/lib/gemini';
+import { MUTATION_OPTIONS, TEXT_MODEL } from '@/constants';
+import {
+  callGemini,
+  extractText,
+  GEMINI_KEY_MISSING_MSG,
+  GeminiNotConfiguredError,
+} from '@/lib/gemini';
 import { histologyLabel, usesNsclcBiomarkerPanel } from '@/lib/utils';
 import type { PatientProfile } from '@/types';
 
@@ -10,10 +15,6 @@ export function useAIInsights() {
   const [errorMsg, setErrorMsg] = useState<string>('');
 
   const generate = async (profile: PatientProfile) => {
-    if (!isGeminiConfigured()) {
-      setErrorMsg(GEMINI_KEY_MISSING_MSG);
-      return;
-    }
     const { age, gender, histology, selectedMutations } = profile;
     setIsGenerating(true);
     setErrorMsg('');
@@ -38,8 +39,12 @@ export function useAIInsights() {
         contents: [{ parts: [{ text: prompt }] }],
       });
       setResponse(extractText(data));
-    } catch {
-      setErrorMsg('리포트 생성 중 오류가 발생했습니다.');
+    } catch (err) {
+      setErrorMsg(
+        err instanceof GeminiNotConfiguredError
+          ? GEMINI_KEY_MISSING_MSG
+          : '리포트 생성 중 오류가 발생했습니다.',
+      );
     } finally {
       setIsGenerating(false);
     }
