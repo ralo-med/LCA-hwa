@@ -1,4 +1,4 @@
-import { Activity, HeartPulse, Loader2, Sparkles } from 'lucide-react';
+import { HeartPulse, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -18,7 +18,13 @@ const Header = ({
   <header className="no-print mb-8 flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-sm md:flex-row md:items-center md:justify-between">
     <div>
       <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-        <Activity className="h-8 w-8 text-primary" />
+        <img
+          src="/hwasun-hospital-logo.png"
+          alt="화순전남대학교병원"
+          width={44}
+          height={44}
+          className="h-10 w-10 shrink-0 rounded-full object-contain md:h-11 md:w-11"
+        />
         폐암 정밀의료 대시보드
       </h1>
       <p className="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
