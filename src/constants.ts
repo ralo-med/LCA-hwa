@@ -23,8 +23,6 @@ export const PDL1_OPTIONS: Pdl1Option[] = [
 
 export const TEXT_MODEL = "gpt-4o-mini";
 export const GUIDE_CHAT_MODEL = "gpt-4o";
-export const TTS_MODEL = "tts-1";
-export const TTS_VOICE = "nova";
 export const EMBEDDING_MODEL = "text-embedding-3-small";
 
 export const API_KEY: string =

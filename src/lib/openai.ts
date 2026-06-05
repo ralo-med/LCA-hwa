@@ -82,25 +82,3 @@ export async function callOpenAIEmbed(text: string, model: string): Promise<numb
   const json = await response.json();
   return json.data[0].embedding as number[];
 }
-
-export async function callOpenAITTS(
-  text: string,
-  model: string,
-  voice: string,
-): Promise<Blob> {
-  if (!isOpenAIConfigured()) {
-    throw new OpenAINotConfiguredError();
-  }
-
-  const response = await fetch(`${BASE_URL}/audio/speech`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${API_KEY}`,
-    },
-    body: JSON.stringify({ model, voice, input: text }),
-  });
-
-  if (!response.ok) throw new Error('TTS 생성에 실패했습니다.');
-  return response.blob();
-}

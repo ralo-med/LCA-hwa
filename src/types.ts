@@ -2,11 +2,6 @@ export type Gender = 'male' | 'female';
 export type Histology = 'adenocarcinoma' | 'squamous' | 'others' | 'smallcell';
 export type ChatRole = 'user' | 'ai';
 
-export interface ChatMessage {
-  role: ChatRole;
-  text: string;
-}
-
 export interface GuideChatSource {
   docTitle: string;
   fileName: string;
