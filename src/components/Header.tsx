@@ -1,10 +1,10 @@
 import { HeartPulse, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { GEMINI_KEY_MISSING_MSG } from '@/lib/gemini';
+import { OPENAI_KEY_MISSING_MSG } from '@/lib/openai';
 
 interface HeaderProps {
-  geminiReady: boolean;
+  aiReady: boolean;
   onGenerateInsights: () => void;
   onGenerateGuide: () => void;
   isGeneratingInsights: boolean;
@@ -12,13 +12,13 @@ interface HeaderProps {
 }
 
 const Header = ({
-  geminiReady,
+  aiReady,
   onGenerateInsights,
   onGenerateGuide,
   isGeneratingInsights,
   isGeneratingGuide,
 }: HeaderProps) => {
-  const aiDisabledTitle = geminiReady ? undefined : GEMINI_KEY_MISSING_MSG;
+  const aiDisabledTitle = aiReady ? undefined : OPENAI_KEY_MISSING_MSG;
 
   return (
   <header className="no-print mb-8 flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -43,7 +43,7 @@ const Header = ({
     <div className="flex flex-wrap items-center gap-2">
       <Button
         onClick={onGenerateInsights}
-        disabled={!geminiReady || isGeneratingInsights}
+        disabled={!aiReady || isGeneratingInsights}
         title={aiDisabledTitle}
       >
         {isGeneratingInsights ? <Loader2 className="animate-spin" /> : <Sparkles />}
@@ -51,7 +51,7 @@ const Header = ({
       </Button>
       <Button
         onClick={onGenerateGuide}
-        disabled={!geminiReady || isGeneratingGuide}
+        disabled={!aiReady || isGeneratingGuide}
         variant="secondary"
         title={aiDisabledTitle}
       >

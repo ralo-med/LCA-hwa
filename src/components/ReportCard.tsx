@@ -10,7 +10,7 @@ interface ReportCardProps {
   text: string;
   isLoading: boolean;
   isPlayingAudio: boolean;
-  geminiReady: boolean;
+  aiReady: boolean;
   onPlayAudio: () => void;
 }
 
@@ -18,7 +18,7 @@ const ReportCard = ({
   text,
   isLoading,
   isPlayingAudio,
-  geminiReady,
+  aiReady,
   onPlayAudio,
 }: ReportCardProps) => {
   const [copied, setCopied] = useState(false);
@@ -44,7 +44,7 @@ const ReportCard = ({
                 variant="ghost"
                 size="icon"
                 onClick={onPlayAudio}
-                disabled={!geminiReady || isPlayingAudio}
+                disabled={!aiReady || isPlayingAudio}
                 aria-label="음성 소견 듣기"
               >
                 {isPlayingAudio ? <Loader2 className="animate-spin" /> : <Volume2 />}

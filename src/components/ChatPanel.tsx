@@ -12,7 +12,7 @@ interface ChatPanelProps {
   setInput: (v: string) => void;
   onSend: () => void;
   isChatting: boolean;
-  geminiReady: boolean;
+  aiReady: boolean;
 }
 
 const ChatPanel = ({
@@ -21,7 +21,7 @@ const ChatPanel = ({
   setInput,
   onSend,
   isChatting,
-  geminiReady,
+  aiReady,
 }: ChatPanelProps) => {
   const endRef = useRef<HTMLDivElement | null>(null);
 
@@ -74,11 +74,11 @@ const ChatPanel = ({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="질문을 구체적으로 기입해 주세요..."
-            disabled={!geminiReady}
+            disabled={!aiReady}
           />
           <Button
             type="submit"
-            disabled={!geminiReady || isChatting || !input.trim()}
+            disabled={!aiReady || isChatting || !input.trim()}
             size="icon"
             aria-label="전송"
           >

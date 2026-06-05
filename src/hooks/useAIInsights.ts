@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { MUTATION_OPTIONS, TEXT_MODEL } from '@/constants';
 import {
-  callGemini,
-  extractText,
-  GEMINI_KEY_MISSING_MSG,
-  GeminiNotConfiguredError,
-} from '@/lib/gemini';
+  callOpenAIChat,
+  OPENAI_KEY_MISSING_MSG,
+  OpenAINotConfiguredError,
+} from '@/lib/openai';
 import { histologyLabel, usesNsclcBiomarkerPanel } from '@/lib/utils';
 import type { PatientProfile } from '@/types';
 
@@ -35,14 +34,15 @@ export function useAIInsights() {
     const prompt = `당신은 "화순전남대학교병원" 소속 폐암 전문의입니다. ${age}대 ${gender === 'female' ? '여성' : '남성'} 환자(조직형: ${hLabel}, ${biomarkerNote})를 위한 폐암 관리 정밀 리포트를 따뜻하게 작성해주세요. 최신 치료법을 언급하고 마지막엔 '화순전남대학교병원 폐암 전문의 드림'이라고 적어주세요.`;
 
     try {
-      const data = await callGemini(`${TEXT_MODEL}:generateContent`, {
-        contents: [{ parts: [{ text: prompt }] }],
-      });
-      setResponse(extractText(data));
+      const text = await callOpenAIChat(
+        [{ role: 'user', content: prompt }],
+        TEXT_MODEL,
+      );
+      setResponse(text);
     } catch (err) {
       setErrorMsg(
-        err instanceof GeminiNotConfiguredError
-          ? GEMINI_KEY_MISSING_MSG
+        err instanceof OpenAINotConfiguredError
+          ? OPENAI_KEY_MISSING_MSG
           : '리포트 생성 중 오류가 발생했습니다.',
       );
     } finally {

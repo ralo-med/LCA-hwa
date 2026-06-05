@@ -21,15 +21,18 @@ export const PDL1_OPTIONS: Pdl1Option[] = [
   { id: "unknown", label: "결과 없음", bonus: 0 },
 ];
 
-export const TEXT_MODEL = "gemini-2.5-flash-preview-09-2025";
-export const TTS_MODEL = "gemini-2.5-flash-preview-tts";
+export const TEXT_MODEL = "gpt-4o-mini";
+export const GUIDE_CHAT_MODEL = "gpt-4o";
+export const TTS_MODEL = "tts-1";
+export const TTS_VOICE = "nova";
+export const EMBEDDING_MODEL = "text-embedding-3-small";
 
 export const API_KEY: string =
-  import.meta.env.VITE_GEMINI_API_KEY?.trim() ?? "";
+  import.meta.env.VITE_OPENAI_API_KEY?.trim() ?? "";
 
-export function isGeminiConfigured(): boolean {
+export function isOpenAIConfigured(): boolean {
   const key = API_KEY;
   if (!key) return false;
-  if (/^your_/i.test(key) || key.includes("your_gemini")) return false;
-  return true;
+  if (/^your_/i.test(key) || key.includes("your_openai")) return false;
+  return key.startsWith("sk-");
 }

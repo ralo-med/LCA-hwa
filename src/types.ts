@@ -7,6 +7,26 @@ export interface ChatMessage {
   text: string;
 }
 
+export interface GuideChatSource {
+  docTitle: string;
+  fileName: string;
+  page: number;
+  excerpt: string;
+}
+
+export type GuideAnswerType = 'chat' | 'general' | 'guideline';
+
+export interface GuideChatMessage {
+  role: ChatRole;
+  text: string;
+  sources?: GuideChatSource[];
+  answerType?: GuideAnswerType;
+}
+
+export type GuideSearchMode = 'auto' | 'search' | 'chat';
+
+export type GuideChatLoadingPhase = 'idle' | 'searching' | 'replying';
+
 export interface MutationOption {
   id: string;
   label: string;

@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { TEXT_MODEL } from '@/constants';
 import {
-  callGemini,
-  extractText,
-  GEMINI_KEY_MISSING_MSG,
-  GeminiNotConfiguredError,
-} from '@/lib/gemini';
+  callOpenAIChat,
+  OPENAI_KEY_MISSING_MSG,
+  OpenAINotConfiguredError,
+} from '@/lib/openai';
 import type { ChatMessage, PatientProfile } from '@/types';
 
 export function useChat(profile: PatientProfile) {
@@ -24,12 +23,13 @@ export function useChat(profile: PatientProfile) {
     const prompt = `화순전남대학교병원 폐암 전문의로서 답변해주세요. 환자 상태: ${age}세, ${gender}, ${histology}. 질문: "${userMsg}"`;
 
     try {
-      const data = await callGemini(`${TEXT_MODEL}:generateContent`, {
-        contents: [{ parts: [{ text: prompt }] }],
-      });
+      const text = await callOpenAIChat(
+        [{ role: 'user', content: prompt }],
+        TEXT_MODEL,
+      );
       setHistory((p) => [
         ...p,
-        { role: 'ai', text: extractText(data) || '답변을 생성하지 못했습니다.' },
+        { role: 'ai', text: text || '답변을 생성하지 못했습니다.' },
       ]);
     } catch (err) {
       setHistory((p) => [
@@ -37,8 +37,8 @@ export function useChat(profile: PatientProfile) {
         {
           role: 'ai',
           text:
-            err instanceof GeminiNotConfiguredError
-              ? GEMINI_KEY_MISSING_MSG
+            err instanceof OpenAINotConfiguredError
+              ? OPENAI_KEY_MISSING_MSG
               : '통신 오류가 발생했습니다.',
         },
       ]);
