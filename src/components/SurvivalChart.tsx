@@ -6,7 +6,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
-import type { SurvivalEstimate } from "@/lib/survival-cbioportal";
+import {
+  getKmCurveTooltipParagraphs,
+  type SurvivalEstimate,
+} from "@/lib/survival-cbioportal";
 import { getCertaintyLabel } from "@/lib/korean-reference";
 import {
   buildKmStepCiBand,
@@ -18,12 +21,18 @@ import { getUntreatedEstimateFootnoteParagraphs } from "@/lib/untreated-estimate
 const metaChipClass =
   "rounded-md border border-border bg-muted/40 text-muted-foreground hover:bg-muted data-[state=open]:bg-muted focus-visible:outline-none focus-visible:ring-0";
 
-const untreatedHelpTooltipClass = cn(
+const chartHelpTooltipClass = cn(
   "border bg-popover text-popover-foreground shadow-md",
   "max-w-sm space-y-2 text-[11px] leading-relaxed",
 );
 
-const UntreatedHelpButton = () => (
+const ChartHelpButton = ({
+  ariaLabel,
+  paragraphs,
+}: {
+  ariaLabel: string;
+  paragraphs: string[];
+}) => (
   <Tooltip>
     <TooltipTrigger asChild>
       <button
@@ -32,17 +41,24 @@ const UntreatedHelpButton = () => (
           "flex shrink-0 items-center justify-center p-1",
           metaChipClass,
         )}
-        aria-label="미치료 추정 계산 방식"
+        aria-label={ariaLabel}
       >
         <CircleHelp className="h-3 w-3" />
       </button>
     </TooltipTrigger>
-    <TooltipContent side="bottom" className={untreatedHelpTooltipClass}>
-      {getUntreatedEstimateFootnoteParagraphs().map((p) => (
+    <TooltipContent side="bottom" className={chartHelpTooltipClass}>
+      {paragraphs.map((p) => (
         <p key={p}>{p}</p>
       ))}
     </TooltipContent>
   </Tooltip>
+);
+
+const UntreatedHelpButton = () => (
+  <ChartHelpButton
+    ariaLabel="미치료 추정 계산 방식"
+    paragraphs={getUntreatedEstimateFootnoteParagraphs()}
+  />
 );
 
 interface SurvivalChartProps {
@@ -86,8 +102,12 @@ const SurvivalChart = ({ data, isLoading }: SurvivalChartProps) => {
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            Kaplan-Meier 생존 곡선
+            <TrendingUp className="h-4 w-4 shrink-0 text-primary" />
+            <span>Kaplan-Meier 생존 곡선</span>
+            <ChartHelpButton
+              ariaLabel="K-M 생존 곡선 설명"
+              paragraphs={getKmCurveTooltipParagraphs()}
+            />
           </CardTitle>
           <div className="flex flex-wrap gap-3 text-[11px] font-medium text-muted-foreground">
             <div className="flex items-center gap-1.5">

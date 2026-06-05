@@ -113,6 +113,16 @@ export function getMedianOsTooltipParagraphs(): string[] {
   ];
 }
 
+/** K-M 생존 곡선 물음표 툴팁 */
+export function getKmCurveTooltipParagraphs(): string[] {
+  return [
+    "입력하신 나이·성별·변이와 비슷한 다른 환자들의 과거 기록(총 생존 기간·사망 여부)을 cBioPortal에서 모아, 시간이 지날수록 ‘아직 살아 있는 비율’이 어떻게 줄어드는지 보여 주는 그래프입니다.",
+    "실선은 Kaplan–Meier 방식입니다. 한동안은 수평으로 가다가, 그 시점에 사망이 기록되면 한 번 아래로 떨어지는 계단 모양입니다. 부드러운 곡선이 아니라 통계에서 쓰는 정석 표현이며, 환자 수가 적거나 사망 시점이 들쭉날쭉하면 계단이 더 잘 보입니다.",
+    "연한 초록 띠는 95% 신뢰구간(대략적인 불확실 범위)입니다. 점선은 미치료 비교용 추정이며, 같은 방식으로 그린 실측 곡선이 아닙니다.",
+    "본인의 앞으로 생존 곡선이 아닙니다. 해석은 담당 전문의와 상의하세요.",
+  ];
+}
+
 /** 5년 K-M 생존 추정치 물음표 툴팁 */
 export function getYear5KmTooltipParagraphs(): string[] {
   return [
