@@ -5,6 +5,7 @@ import {
   Loader2,
   MessageSquare,
   MessageSquareText,
+  PlusCircle,
   RotateCcw,
   Search,
   Send,
@@ -234,6 +235,39 @@ const GuideChatPage = () => {
                         <p className="whitespace-pre-wrap">{displayText}</p>
                       )}
                     </div>
+
+                    {msg.role === "ai" &&
+                      msg.answerType === "guideline" &&
+                      !msg.supplementText && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 max-w-[90%] gap-1.5 border-amber-200/80 bg-amber-50/50 text-xs text-amber-900 hover:bg-amber-100/80 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-950/50"
+                          disabled={
+                            !llm.isChatReady ||
+                            chat.isChatting ||
+                            chat.supplementLoadingIndex !== null
+                          }
+                          onClick={() => chat.requestSupplement(i)}
+                        >
+                          {chat.supplementLoadingIndex === i ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <PlusCircle className="h-3.5 w-3.5" />
+                          )}
+                          추가 정보
+                        </Button>
+                      )}
+
+                    {msg.role === "ai" && msg.supplementText && (
+                      <div className="w-full max-w-[90%] rounded-lg border border-sky-200/80 bg-sky-50/90 px-3 py-2.5 dark:border-sky-900/60 dark:bg-sky-950/35">
+                        <p className="mb-2 text-[10px] font-medium text-sky-800 dark:text-sky-200">
+                          추가 안내
+                        </p>
+                        <ChatMarkdown content={msg.supplementText} />
+                      </div>
+                    )}
 
                     {msg.role === "ai" &&
                       msg.answerType === "guideline" &&

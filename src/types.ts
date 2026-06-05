@@ -16,6 +16,8 @@ export interface GuideChatMessage {
   text: string;
   sources?: GuideChatSource[];
   answerType?: GuideAnswerType;
+  /** 가이드라인 기반 답변에 대한 보충 설명 */
+  supplementText?: string;
 }
 
 export type GuideSearchMode = 'auto' | 'search' | 'chat';

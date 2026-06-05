@@ -1,4 +1,5 @@
 import { getChatModel, type LlmProvider } from '@/lib/llm-models';
+import { buildOpenAiTokenLimit } from '@/lib/openai';
 import { canUseModel, getApiKeyForModel } from '@/lib/llm-settings';
 
 export interface LlmChatMessage {
@@ -93,7 +94,9 @@ async function callOpenAI(
     body: JSON.stringify({
       model,
       messages,
-      ...(options.maxTokens != null ? { max_tokens: options.maxTokens } : {}),
+      ...(options.maxTokens != null
+        ? buildOpenAiTokenLimit(model, options.maxTokens)
+        : {}),
     }),
   });
 

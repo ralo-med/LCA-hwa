@@ -7,6 +7,10 @@ import {
 } from '@/lib/llm-client';
 import type { GuidePatientContext } from '@/lib/guide-patient-context';
 import {
+  answerDeniesGuidelineRelevance,
+  buildSupplementMessages,
+  dedupeSupplementText,
+  filterRelevantCitations,
   loadGuideChunks,
   planChatResponse,
   resolveAnswerSources,
@@ -32,6 +36,9 @@ export function useGuideChat(
   const [dataReady, setDataReady] = useState(false);
   const [dataError, setDataError] = useState('');
   const [embedModel, setEmbedModel] = useState(EMBEDDING_MODEL);
+  const [supplementLoadingIndex, setSupplementLoadingIndex] = useState<
+    number | null
+  >(null);
 
   useEffect(() => {
     loadGuideChunks()
@@ -68,16 +75,26 @@ export function useGuideChat(
 
       setLoadingPhase('replying');
       const rawText = await callLlmChat(plan.messages, chatModelId, {
-        maxTokens: 1600,
+        maxTokens: 900,
         retries: 5,
       });
       const text = stripDefensiveClosing(rawText || '');
-      const { sources, answerType } = resolveAnswerSources(
+      const resolved = resolveAnswerSources(
         plan.citations,
         text,
         plan.retrievalQuery,
         plan.searchedGuidelines,
       );
+      const sources =
+        plan.fromGuidelineRag && plan.citations.length > 0
+          ? filterRelevantCitations(plan.citations, plan.retrievalQuery)
+          : resolved.sources;
+      const answerType =
+        plan.fromGuidelineRag &&
+        plan.citations.length > 0 &&
+        !answerDeniesGuidelineRelevance(text)
+          ? 'guideline'
+          : resolved.answerType;
 
       setHistory((p) => [
         ...p,
@@ -107,11 +124,77 @@ export function useGuideChat(
     }
   };
 
+  const requestSupplement = async (aiMessageIndex: number) => {
+    const msg = history[aiMessageIndex];
+    if (
+      !msg ||
+      msg.role !== 'ai' ||
+      msg.answerType !== 'guideline' ||
+      msg.supplementText ||
+      isChatting ||
+      supplementLoadingIndex !== null
+    ) {
+      return;
+    }
+
+    let userQuestion = '';
+    for (let i = aiMessageIndex - 1; i >= 0; i--) {
+      if (history[i]?.role === 'user') {
+        userQuestion = history[i]!.text;
+        break;
+      }
+    }
+    if (!userQuestion) return;
+
+    setSupplementLoadingIndex(aiMessageIndex);
+    try {
+      const messages = buildSupplementMessages(
+        userQuestion,
+        msg.text,
+        patientContext,
+      );
+      const rawText = await callLlmChat(messages, chatModelId, {
+        maxTokens: 1000,
+        retries: 3,
+      });
+      const text = dedupeSupplementText(
+        stripDefensiveClosing(rawText || ''),
+        msg.text,
+      );
+      setHistory((p) =>
+        p.map((m, i) =>
+          i === aiMessageIndex
+            ? { ...m, supplementText: text || '추가 정보를 생성하지 못했습니다.' }
+            : m,
+        ),
+      );
+    } catch (err) {
+      setHistory((p) =>
+        p.map((m, i) =>
+          i === aiMessageIndex
+            ? {
+                ...m,
+                supplementText:
+                  err instanceof LlmNotConfiguredError
+                    ? chatKeyMissingMessage(err.provider)
+                    : err instanceof Error
+                      ? err.message
+                      : '추가 정보를 가져오지 못했습니다.',
+              }
+            : m,
+        ),
+      );
+    } finally {
+      setSupplementLoadingIndex(null);
+    }
+  };
+
   const reset = () => {
-    if (isChatting) return;
+    if (isChatting || supplementLoadingIndex !== null) return;
     setHistory([]);
     setInput('');
     setLoadingPhase('idle');
+    setSupplementLoadingIndex(null);
   };
 
   return {
@@ -119,9 +202,11 @@ export function useGuideChat(
     input,
     setInput,
     send,
+    requestSupplement,
     reset,
     isChatting,
     loadingPhase,
+    supplementLoadingIndex,
     guideMode,
     setGuideMode,
     dataReady,

@@ -1,6 +1,52 @@
 import { Fragment, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
+/** LLM이 짝 없는 ** 를 내면 그대로 화면에 보임 — 유효한 쌍만 남김 */
+function normalizeBoldMarkers(text: string): string {
+  const indices: number[] = [];
+  for (let i = 0; i < text.length - 1; i++) {
+    if (text[i] === '*' && text[i + 1] === '*') indices.push(i);
+  }
+  if (indices.length < 2) {
+    return text.replace(/\*\*/g, '');
+  }
+
+  const paired = new Set<number>();
+  for (let i = 0; i + 1 < indices.length; i += 2) {
+    const open = indices[i]!;
+    const close = indices[i + 1]!;
+    const inner = text.slice(open + 2, close);
+    if (
+      inner.length > 0 &&
+      inner.length <= 100 &&
+      !inner.includes('\n') &&
+      !inner.includes('**')
+    ) {
+      paired.add(open);
+      paired.add(close);
+    }
+  }
+
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '*' && text[i + 1] === '*') {
+      if (paired.has(i)) {
+        result += '**';
+      }
+      i++;
+      continue;
+    }
+    result += text[i];
+  }
+  return result;
+}
+
+export function sanitizeChatMarkdown(content: string): string {
+  let text = normalizeBoldMarkers(content);
+  text = text.replace(/^(\d+\.)\s*\n+(\S)/gm, '$1 $2');
+  return text;
+}
+
 function parseInline(text: string, keyPrefix: string): ReactNode[] {
   return text
     .split(/(\*\*[^*]+\*\*)/g)
@@ -174,7 +220,7 @@ export function ChatMarkdown({
   content: string;
   className?: string;
 }) {
-  const blocks = parseBlocks(content);
+  const blocks = parseBlocks(sanitizeChatMarkdown(content));
 
   return (
     <div className={cn('space-y-2 leading-relaxed', className)}>

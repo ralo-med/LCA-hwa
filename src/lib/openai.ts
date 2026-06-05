@@ -21,6 +21,21 @@ export interface OpenAIChatOptions {
   maxTokens?: number;
 }
 
+/** GPT-5 / o-series는 max_tokens 대신 max_completion_tokens 필요 */
+export function openAiUsesMaxCompletionTokens(model: string): boolean {
+  return /^(gpt-5|o[134](-|$))/i.test(model);
+}
+
+export function buildOpenAiTokenLimit(
+  model: string,
+  maxTokens: number,
+): Record<string, number> {
+  const key = openAiUsesMaxCompletionTokens(model)
+    ? 'max_completion_tokens'
+    : 'max_tokens';
+  return { [key]: maxTokens };
+}
+
 export async function callOpenAIChat(
   messages: OpenAIChatMessage[],
   model: string,
@@ -42,7 +57,9 @@ export async function callOpenAIChat(
         body: JSON.stringify({
           model,
           messages,
-          ...(options.maxTokens != null ? { max_tokens: options.maxTokens } : {}),
+          ...(options.maxTokens != null
+            ? buildOpenAiTokenLimit(model, options.maxTokens)
+            : {}),
         }),
       });
 
