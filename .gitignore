@@ -28,5 +28,9 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Local script caches (never commit)
+scripts/.cache-test/
+scripts/.tmp-rag.ts
+
 # Vercel
 .vercel
