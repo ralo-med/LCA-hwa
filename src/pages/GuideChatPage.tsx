@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  ALargeSmall,
   ChevronRight,
   Loader2,
   MessageSquare,
@@ -17,8 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ModelSettingsDialog } from "@/components/ModelSettingsDialog";
+import { useChatFontSize } from "@/hooks/useChatFontSize";
 import { useGuideChat } from "@/hooks/useGuideChat";
 import { useLlmSettings } from "@/hooks/useLlmSettings";
+import { CHAT_FONT_SIZE_OPTIONS } from "@/lib/chat-font-size";
 import { usePatientProfile } from "@/hooks/usePatientProfile";
 import { cn } from "@/lib/cn";
 import { formatMutationLabels, formatPdl1Label } from "@/lib/guide-patient-context";
@@ -51,6 +54,7 @@ const INPUT_PLACEHOLDER: Record<GuideSearchMode, string> = {
 
 const GuideChatPage = () => {
   const llm = useLlmSettings();
+  const chatFont = useChatFontSize();
   const { profile } = usePatientProfile();
   const chat = useGuideChat({ profile }, llm.selectedModelId);
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -135,7 +139,31 @@ const GuideChatPage = () => {
               <MessageSquare className="h-5 w-5 text-primary" />
               가이드라인 기반 상담
             </CardTitle>
-            <div className="flex shrink-0 gap-1.5">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+              <div
+                className="flex items-center gap-0.5 rounded-md border bg-background p-0.5"
+                role="group"
+                aria-label="채팅 글자 크기"
+              >
+                <span className="hidden px-1.5 text-[10px] text-muted-foreground sm:inline">
+                  <ALargeSmall className="mr-0.5 inline h-3 w-3" />
+                  글자
+                </span>
+                {CHAT_FONT_SIZE_OPTIONS.map((opt) => (
+                  <Button
+                    key={opt.id}
+                    type="button"
+                    variant={chatFont.sizeId === opt.id ? "default" : "ghost"}
+                    size="sm"
+                    className="h-7 px-2 text-[10px]"
+                    onClick={() => chatFont.setSize(opt.id)}
+                    aria-pressed={chatFont.sizeId === opt.id}
+                    aria-label={`글자 크기 ${opt.label}`}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
               <Button
                 type="button"
                 variant="outline"
@@ -223,14 +251,18 @@ const GuideChatPage = () => {
 
                     <div
                       className={cn(
-                        "max-w-[90%] rounded-lg px-3 py-2 text-sm leading-relaxed",
+                        "max-w-[90%] rounded-lg px-3 py-2 leading-relaxed",
+                        chatFont.className,
                         msg.role === "user"
                           ? "rounded-tr-none bg-primary text-primary-foreground"
                           : "rounded-tl-none border bg-card text-foreground shadow-sm",
                       )}
                     >
                       {msg.role === "ai" ? (
-                        <ChatMarkdown content={displayText} />
+                        <ChatMarkdown
+                          content={displayText}
+                          className={chatFont.className}
+                        />
                       ) : (
                         <p className="whitespace-pre-wrap">{displayText}</p>
                       )}
@@ -261,11 +293,19 @@ const GuideChatPage = () => {
                       )}
 
                     {msg.role === "ai" && msg.supplementText && (
-                      <div className="w-full max-w-[90%] rounded-lg border border-sky-200/80 bg-sky-50/90 px-3 py-2.5 dark:border-sky-900/60 dark:bg-sky-950/35">
+                      <div
+                        className={cn(
+                          "w-full max-w-[90%] rounded-lg border border-sky-200/80 bg-sky-50/90 px-3 py-2.5 leading-relaxed dark:border-sky-900/60 dark:bg-sky-950/35",
+                          chatFont.className,
+                        )}
+                      >
                         <p className="mb-2 text-[10px] font-medium text-sky-800 dark:text-sky-200">
                           추가 안내
                         </p>
-                        <ChatMarkdown content={msg.supplementText} />
+                        <ChatMarkdown
+                          content={msg.supplementText}
+                          className={chatFont.className}
+                        />
                       </div>
                     )}
 
@@ -291,7 +331,12 @@ const GuideChatPage = () => {
                                   {s.fileName}
                                   <span className="mx-1">·</span>p.{s.page}
                                 </p>
-                                <p className="mt-1 leading-relaxed text-amber-950/90 dark:text-amber-50/90">
+                                <p
+                                  className={cn(
+                                    "mt-1 leading-relaxed text-amber-950/90 dark:text-amber-50/90",
+                                    chatFont.className,
+                                  )}
+                                >
                                   {s.excerpt}
                                 </p>
                               </div>
