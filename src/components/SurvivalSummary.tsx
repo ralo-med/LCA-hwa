@@ -40,6 +40,7 @@ const cardHelpTooltipClass = cn(
 interface SurvivalSummaryProps {
   data: SurvivalEstimate | null;
   isLoading: boolean;
+  studiesMetaPending?: boolean;
   error: string | null;
 }
 
@@ -53,7 +54,12 @@ const fmtPct = (v: number | null | undefined) =>
 const linkClass =
   "text-primary underline-offset-2 hover:underline";
 
-const SurvivalSummary = ({ data, isLoading, error }: SurvivalSummaryProps) => {
+const SurvivalSummary = ({
+  data,
+  isLoading,
+  studiesMetaPending = false,
+  error,
+}: SurvivalSummaryProps) => {
   const [studiesOpen, setStudiesOpen] = useState(false);
   const showSkeleton = isLoading && !data;
   const median = data?.median ?? null;
@@ -338,11 +344,11 @@ const SurvivalSummary = ({ data, isLoading, error }: SurvivalSummaryProps) => {
                               >
                                 논문
                               </a>
-                            ) : (
+                            ) : studiesMetaPending ? (
                               <span className="text-muted-foreground">
-                                논문 링크 없음
+                                논문 정보 확인 중…
                               </span>
-                            )}
+                            ) : null}
                           </p>
                         </li>
                       ))}

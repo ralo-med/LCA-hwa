@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react';
-import { estimateSurvival, type SurvivalEstimate } from '@/lib/survival-cbioportal';
+import { useEffect, useRef, useState } from 'react';
+import {
+  enrichContributingStudies,
+  estimateSurvival,
+  type SurvivalEstimate,
+} from '@/lib/survival-cbioportal';
 import type { PatientProfile } from '@/types';
 
 interface UseSurvivalResult {
   data: SurvivalEstimate | null;
   isLoading: boolean;
+  /** 연구 목록 PubMed·제목 메타 조회 중 */
+  studiesMetaPending: boolean;
   error: string | null;
 }
 
@@ -15,24 +21,51 @@ interface UseSurvivalResult {
 export function useSurvival(profile: PatientProfile, debounceMs: number = 300): UseSurvivalResult {
   const [data, setData] = useState<SurvivalEstimate | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [studiesMetaPending, setStudiesMetaPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const prevHistology = useRef(profile.histology);
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
+    const histologyChanged = prevHistology.current !== profile.histology;
+    if (histologyChanged) {
+      prevHistology.current = profile.histology;
+      setData(null);
+      setIsLoading(true);
+    }
     setError(null);
 
     const timer = setTimeout(async () => {
       try {
         const result = await estimateSurvival(profile);
-        if (!cancelled) {
-          setData(result);
-          setIsLoading(false);
+        if (cancelled) return;
+
+        setData(result);
+        setIsLoading(false);
+
+        if (result.contributingStudies.length === 0) {
+          setStudiesMetaPending(false);
+          return;
+        }
+
+        setStudiesMetaPending(true);
+        try {
+          const enriched = await enrichContributingStudies(
+            result.contributingStudies,
+          );
+          if (!cancelled) {
+            setData((prev) =>
+              prev ? { ...prev, contributingStudies: enriched } : prev,
+            );
+          }
+        } finally {
+          if (!cancelled) setStudiesMetaPending(false);
         }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : '생존율 데이터를 불러오지 못했습니다.');
           setIsLoading(false);
+          setStudiesMetaPending(false);
         }
       }
     }, debounceMs);
@@ -43,5 +76,5 @@ export function useSurvival(profile: PatientProfile, debounceMs: number = 300): 
     };
   }, [profile, debounceMs]);
 
-  return { data, isLoading, error };
+  return { data, isLoading, studiesMetaPending, error };
 }

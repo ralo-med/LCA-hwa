@@ -53,6 +53,11 @@ export function usePatientProfile() {
     setSelectedMutations(next);
   };
 
+  const resetMutations = () => {
+    if (!usesNsclcBiomarkerPanel(histology)) return;
+    setSelectedMutations(["none"]);
+  };
+
   const profile = useMemo<PatientProfile>(
     () => ({ age, gender, histology, selectedMutations, pdl1 }),
     [age, gender, histology, selectedMutations, pdl1],
@@ -64,5 +69,6 @@ export function usePatientProfile() {
     setGender,
     setHistology: setHistologyAndResetBiomarkers,
     toggleMutation,
+    resetMutations,
   };
 }

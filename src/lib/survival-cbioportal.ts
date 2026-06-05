@@ -5,6 +5,8 @@ import {
   buildPatientRecords,
   fetchClinicalData,
   fetchMutations,
+  fetchStudyMeta,
+  pubmedUrl,
   type PatientRecord,
 } from "@/lib/cbioportal";
 import {
@@ -16,7 +18,6 @@ import {
   getSampleListId,
   type StudyConfig,
 } from "@/lib/cohort-config";
-import { fetchStudyMeta, pubmedUrl } from "@/lib/cbioportal";
 import {
   getAgeDecadeBand,
   getKoreanReference,
@@ -60,21 +61,31 @@ interface ContributingStudyDraft {
   totalWithOsN: number;
 }
 
-async function enrichContributingStudies(
-  rows: ContributingStudyDraft[],
+function toContributingStudy(row: ContributingStudyDraft): ContributingStudy {
+  return {
+    studyId: row.studyId,
+    title: row.label,
+    citation: row.citation,
+    population: row.population,
+    cBioPortalUrl: row.cBioPortalUrl,
+    paperUrl: null,
+    n: row.n,
+    totalWithOsN: row.totalWithOsN,
+  };
+}
+
+/** cBioPortal 연구 메타(제목·인용·PubMed) — 메모리 캐시 활용, 병렬 조회 */
+export async function enrichContributingStudies(
+  rows: ContributingStudy[],
 ): Promise<ContributingStudy[]> {
   return Promise.all(
     rows.map(async (row) => {
       const meta = await fetchStudyMeta(row.studyId);
       return {
-        studyId: row.studyId,
-        title: meta?.name ?? row.label,
+        ...row,
+        title: meta?.name ?? row.title,
         citation: meta?.citation ?? row.citation,
-        population: row.population,
-        cBioPortalUrl: row.cBioPortalUrl,
         paperUrl: meta?.pmid ? pubmedUrl(meta.pmid) : null,
-        n: row.n,
-        totalWithOsN: row.totalWithOsN,
       };
     }),
   );
@@ -184,22 +195,96 @@ interface CachedCohort {
 }
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
+const LS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const LS_COHORT_PREFIX = "lca-cohort-cache:";
 const cohortCache = new Map<Histology, CachedCohort>();
 const inflight = new Map<Histology, Promise<CachedCohort>>();
+
+type SerializedPatientRecord = Omit<PatientRecord, "mutations"> & {
+  mutations: number[];
+};
+
+function serializeRecords(records: PatientRecord[]): SerializedPatientRecord[] {
+  return records.map((r) => ({
+    ...r,
+    mutations: [...r.mutations],
+  }));
+}
+
+function deserializeRecords(rows: SerializedPatientRecord[]): PatientRecord[] {
+  return rows.map((r) => ({
+    ...r,
+    mutations: new Set(r.mutations),
+  }));
+}
+
+function buildByStudy(
+  studies: StudyConfig[],
+  records: PatientRecord[],
+): Map<string, PatientRecord[]> {
+  const byStudy = new Map<string, PatientRecord[]>();
+  for (const study of studies) {
+    byStudy.set(study.studyId, []);
+  }
+  for (const rec of records) {
+    const list = byStudy.get(rec.studyId);
+    if (list) list.push(rec);
+  }
+  return byStudy;
+}
+
+function loadPersistedCohort(histology: Histology): CachedCohort | null {
+  try {
+    const raw = localStorage.getItem(`${LS_COHORT_PREFIX}${histology}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      studies: StudyConfig[];
+      records: SerializedPatientRecord[];
+      fetchedAt: number;
+    };
+    if (Date.now() - parsed.fetchedAt > LS_CACHE_TTL_MS) return null;
+    const records = deserializeRecords(parsed.records);
+    return {
+      studies: parsed.studies,
+      records,
+      byStudy: buildByStudy(parsed.studies, records),
+      fetchedAt: parsed.fetchedAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistCohort(histology: Histology, cohort: CachedCohort): void {
+  try {
+    localStorage.setItem(
+      `${LS_COHORT_PREFIX}${histology}`,
+      JSON.stringify({
+        studies: cohort.studies,
+        records: serializeRecords(cohort.records),
+        fetchedAt: cohort.fetchedAt,
+      }),
+    );
+  } catch {
+    /* quota exceeded 등 — 메모리 캐시만 사용 */
+  }
+}
 
 async function fetchSingleStudy(
   study: StudyConfig,
   fetchDriverMutations: boolean,
 ): Promise<PatientRecord[]> {
   try {
-    const clinical = await fetchClinicalData(study.studyId);
-    const mutations = fetchDriverMutations
-      ? await fetchMutations(
-          getMutationProfileId(study.studyId),
-          getSampleListId(study.studyId),
-          ALL_LUNG_DRIVER_GENES,
-        )
-      : [];
+    const [clinical, mutations] = await Promise.all([
+      fetchClinicalData(study.studyId),
+      fetchDriverMutations
+        ? fetchMutations(
+            getMutationProfileId(study.studyId),
+            getSampleListId(study.studyId),
+            ALL_LUNG_DRIVER_GENES,
+          )
+        : Promise.resolve([] as Awaited<ReturnType<typeof fetchMutations>>),
+    ]);
     return buildPatientRecords(clinical, mutations);
   } catch (err) {
     console.warn(`[cohort] ${study.studyId} fetch 실패`, err);
@@ -212,6 +297,13 @@ export async function loadCohort(histology: Histology): Promise<CachedCohort> {
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
     return cached;
   }
+
+  const persisted = loadPersistedCohort(histology);
+  if (persisted) {
+    cohortCache.set(histology, persisted);
+    return persisted;
+  }
+
   const existing = inflight.get(histology);
   if (existing) return existing;
 
@@ -225,7 +317,7 @@ export async function loadCohort(histology: Histology): Promise<CachedCohort> {
     const records: PatientRecord[] = [];
     const byStudy = new Map<string, PatientRecord[]>();
     studies.forEach((study, idx) => {
-      const recs = perStudyRecords[idx];
+      const recs = perStudyRecords[idx] ?? [];
       byStudy.set(study.studyId, recs);
       records.push(...recs);
     });
@@ -236,6 +328,7 @@ export async function loadCohort(histology: Histology): Promise<CachedCohort> {
       fetchedAt: Date.now(),
     };
     cohortCache.set(histology, cohort);
+    persistCohort(histology, cohort);
     return cohort;
   })();
 
@@ -313,7 +406,7 @@ export async function estimateSurvival(
     r.age === null || (r.age >= ageBand[0] && r.age <= ageBand[1]);
   const matchMutation: Filter = (r) =>
     !requiresMutation ||
-    Array.from(wantedEntrez).some((g) => r.mutations.has(g));
+    Array.from(wantedEntrez).every((g) => r.mutations.has(g));
 
   const cohort = applyFilters(records, [
     hasOS,
@@ -341,7 +434,7 @@ export async function estimateSurvival(
     })
     .filter((c) => c.n > 0);
 
-  const contributingStudies = await enrichContributingStudies(contributingBase);
+  const contributingStudies = contributingBase.map(toContributingStudy);
 
   const contributingStudyIds = new Set(
     contributingStudies.map((c) => c.studyId),

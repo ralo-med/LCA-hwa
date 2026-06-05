@@ -29,12 +29,14 @@ const DashboardPage = () => {
             setGender={patient.setGender}
             setHistology={patient.setHistology}
             toggleMutation={patient.toggleMutation}
+            resetMutations={patient.resetMutations}
           />
 
           <main className="print-full space-y-6 lg:col-span-8">
             <SurvivalSummary
               data={survival.data}
               isLoading={survival.isLoading}
+              studiesMetaPending={survival.studiesMetaPending}
               error={survival.error}
             />
             <SurvivalChart data={survival.data} isLoading={survival.isLoading} />

@@ -70,9 +70,14 @@ export function pubmedUrl(pmid: string | number): string {
   return `https://pubmed.ncbi.nlm.nih.gov/${String(pmid)}/`;
 }
 
+const studyMetaCache = new Map<string, CbioStudyMeta | null>();
+
 export async function fetchStudyMeta(
   studyId: string,
 ): Promise<CbioStudyMeta | null> {
+  if (studyMetaCache.has(studyId)) {
+    return studyMetaCache.get(studyId) ?? null;
+  }
   try {
     const data = await fetchJson<{
       studyId: string;
@@ -80,13 +85,16 @@ export async function fetchStudyMeta(
       citation?: string;
       pmid?: string;
     }>(`/studies/${studyId}`);
-    return {
+    const meta: CbioStudyMeta = {
       studyId: data.studyId,
       name: data.name,
       citation: data.citation,
       pmid: data.pmid,
     };
+    studyMetaCache.set(studyId, meta);
+    return meta;
   } catch {
+    studyMetaCache.set(studyId, null);
     return null;
   }
 }

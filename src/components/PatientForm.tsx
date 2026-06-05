@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Stethoscope, User } from "lucide-react";
+import { RotateCcw, Stethoscope, User } from "lucide-react";
 import { MUTATION_OPTIONS } from "@/constants";
 import { getPdl1SurvivalReference } from "@/lib/pdl1-reference";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ interface PatientFormProps {
   setGender: (v: Gender) => void;
   setHistology: (v: Histology) => void;
   toggleMutation: (id: string) => void;
+  resetMutations: () => void;
 }
 
 const PatientForm = ({
@@ -32,9 +33,12 @@ const PatientForm = ({
   setGender,
   setHistology,
   toggleMutation,
+  resetMutations,
 }: PatientFormProps) => {
   const { age, gender, histology, selectedMutations } = profile;
   const biomarkerSelectable = usesNsclcBiomarkerPanel(histology);
+  const mutationsAtDefault =
+    selectedMutations.length === 1 && selectedMutations[0] === "none";
   const pdl1Ref = getPdl1SurvivalReference(histology);
   const [pdl1TierId, setPdl1TierId] = useState<string | null>(null);
 
@@ -125,18 +129,34 @@ const PatientForm = ({
           <Separator />
 
           <div className="space-y-2">
-            <Label
-              className={
-                biomarkerSelectable ? undefined : "text-muted-foreground"
-              }
-            >
-              드라이버 유전자 변이
+            <div className="flex items-center justify-between gap-2">
+              <Label
+                className={
+                  biomarkerSelectable ? undefined : "text-muted-foreground"
+                }
+              >
+                드라이버 유전자 변이
+              </Label>
               {biomarkerSelectable && (
-                <span className="ml-1 font-normal text-muted-foreground">
-                  (복수 선택)
-                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 shrink-0 gap-1 px-2 text-[10px] text-muted-foreground"
+                  onClick={resetMutations}
+                  disabled={mutationsAtDefault}
+                  aria-label="드라이버 유전자 변이 초기화"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  초기화
+                </Button>
               )}
-            </Label>
+            </div>
+            {biomarkerSelectable && (
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                여러 개 선택 시, 선택한 변이를 모두 가진 환자만 포함합니다.
+              </p>
+            )}
             {!biomarkerSelectable && (
               <p className="text-[11px] leading-relaxed text-muted-foreground">
                 소세포폐암은 선암·편평상피암과 달리, EGFR·ALK 같은 유전자로
