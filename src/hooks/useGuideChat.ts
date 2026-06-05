@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { GUIDE_CHAT_MODEL } from '@/constants';
+import { EMBEDDING_MODEL } from '@/constants';
 import {
-  callOpenAIChat,
-  OPENAI_KEY_MISSING_MSG,
-  OpenAINotConfiguredError,
-} from '@/lib/openai';
+  callLlmChat,
+  chatKeyMissingMessage,
+  LlmNotConfiguredError,
+} from '@/lib/llm-client';
+import type { GuidePatientContext } from '@/lib/guide-patient-context';
 import {
   loadGuideChunks,
   planChatResponse,
@@ -16,10 +17,12 @@ import type {
   GuideChatLoadingPhase,
   GuideChatMessage,
   GuideSearchMode,
-  PatientProfile,
 } from '@/types';
 
-export function useGuideChat(profile: PatientProfile) {
+export function useGuideChat(
+  patientContext: GuidePatientContext,
+  chatModelId: string,
+) {
   const [history, setHistory] = useState<GuideChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [guideMode, setGuideMode] = useState<GuideSearchMode>('auto');
@@ -28,12 +31,14 @@ export function useGuideChat(profile: PatientProfile) {
     useState<GuideChatLoadingPhase>('idle');
   const [dataReady, setDataReady] = useState(false);
   const [dataError, setDataError] = useState('');
+  const [embedModel, setEmbedModel] = useState(EMBEDDING_MODEL);
 
   useEffect(() => {
     loadGuideChunks()
-      .then(() => {
+      .then((store) => {
         setDataReady(true);
         setDataError('');
+        if (store.model) setEmbedModel(store.model);
       })
       .catch((err: Error) => {
         setDataError(err.message);
@@ -49,31 +54,22 @@ export function useGuideChat(profile: PatientProfile) {
 
     setInput('');
     setHistory((p) => [...p, { role: 'user', text: userMsg }]);
-    const willSearch = shouldSearchGuidelines(
-      userMsg,
-      guideMode,
-      priorHistory,
-    );
+    const willSearch = shouldSearchGuidelines(userMsg, guideMode, priorHistory);
     setIsChatting(true);
     setLoadingPhase(willSearch ? 'searching' : 'replying');
-
-    const profileCtx = {
-      age: profile.age,
-      gender: profile.gender,
-      histology: profile.histology,
-    };
 
     try {
       const plan = await planChatResponse(
         userMsg,
-        profileCtx,
+        patientContext,
         priorHistory,
         guideMode,
       );
 
       setLoadingPhase('replying');
-      const rawText = await callOpenAIChat(plan.messages, GUIDE_CHAT_MODEL, 5, {
+      const rawText = await callLlmChat(plan.messages, chatModelId, {
         maxTokens: 1600,
+        retries: 5,
       });
       const text = stripDefensiveClosing(rawText || '');
       const { sources, answerType } = resolveAnswerSources(
@@ -98,8 +94,8 @@ export function useGuideChat(profile: PatientProfile) {
         {
           role: 'ai',
           text:
-            err instanceof OpenAINotConfiguredError
-              ? OPENAI_KEY_MISSING_MSG
+            err instanceof LlmNotConfiguredError
+              ? chatKeyMissingMessage(err.provider)
               : err instanceof Error
                 ? err.message
                 : '통신 오류가 발생했습니다.',
@@ -130,5 +126,7 @@ export function useGuideChat(profile: PatientProfile) {
     setGuideMode,
     dataReady,
     dataError,
+    chatModelId,
+    embedModel,
   };
 }

@@ -2,11 +2,6 @@ import { BookOpen, ExternalLink, FileText, LayoutDashboard, Stethoscope } from '
 import { NavLink } from 'react-router-dom';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/cn';
-import { OPENAI_KEY_MISSING_MSG } from '@/lib/openai';
-
-interface AppNavProps {
-  aiReady: boolean;
-}
 
 const DOCTORS_URL =
   'https://www.cnuhh.com/medical/info/dept.cs?act=view&mode=doctorList&deptCd=IMP';
@@ -19,7 +14,6 @@ type NavItem =
       shortLabel: string;
       icon: typeof LayoutDashboard;
       end?: boolean;
-      requiresAi?: boolean;
     }
   | {
       kind: 'external';
@@ -44,7 +38,6 @@ const NAV_ITEMS: NavItem[] = [
     label: '환자 안내 챗봇',
     shortLabel: '환자 챗봇',
     icon: BookOpen,
-    requiresAi: true,
   },
   {
     kind: 'internal',
@@ -71,7 +64,7 @@ const linkClass = (isActive: boolean, disabled?: boolean) =>
     disabled && 'pointer-events-none opacity-50',
   );
 
-const AppNav = ({ aiReady }: AppNavProps) => {
+const AppNav = () => {
   return (
     <header className="no-print shrink-0 border-b bg-card pt-[env(safe-area-inset-top,0px)]">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 md:px-8">
@@ -123,14 +116,12 @@ const AppNav = ({ aiReady }: AppNavProps) => {
               );
             }
 
-            const disabled = item.requiresAi && !aiReady;
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.end}
-                title={disabled ? OPENAI_KEY_MISSING_MSG : undefined}
-                className={({ isActive }) => linkClass(isActive, disabled)}
+                className={({ isActive }) => linkClass(isActive)}
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="sm:hidden">{item.shortLabel}</span>

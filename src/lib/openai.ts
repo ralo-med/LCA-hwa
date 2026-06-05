@@ -1,9 +1,9 @@
-import { API_KEY, isOpenAIConfigured } from '@/constants';
+import { getApiKey, isOpenAIAvailable } from '@/lib/llm-settings';
 
 const BASE_URL = 'https://api.openai.com/v1';
 
 export const OPENAI_KEY_MISSING_MSG =
-  'OpenAI API 키가 없습니다. 프로젝트 루트 .env 파일에 VITE_OPENAI_API_KEY를 설정한 뒤 개발 서버를 다시 실행해 주세요.';
+  'OpenAI API 키가 없습니다. 챗봇 설정에서 키를 입력하거나 .env에 VITE_OPENAI_API_KEY를 설정해 주세요.';
 
 export class OpenAINotConfiguredError extends Error {
   constructor() {
@@ -27,7 +27,7 @@ export async function callOpenAIChat(
   retries: number = 5,
   options: OpenAIChatOptions = {},
 ): Promise<string> {
-  if (!isOpenAIConfigured()) {
+  if (!isOpenAIAvailable()) {
     throw new OpenAINotConfiguredError();
   }
 
@@ -37,7 +37,7 @@ export async function callOpenAIChat(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${API_KEY}`,
+          Authorization: `Bearer ${getApiKey('openai')}`,
         },
         body: JSON.stringify({
           model,
@@ -64,7 +64,7 @@ export async function callOpenAIChat(
 }
 
 export async function callOpenAIEmbed(text: string, model: string): Promise<number[]> {
-  if (!isOpenAIConfigured()) {
+  if (!isOpenAIAvailable()) {
     throw new OpenAINotConfiguredError();
   }
 
@@ -72,7 +72,7 @@ export async function callOpenAIEmbed(text: string, model: string): Promise<numb
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${API_KEY}`,
+      Authorization: `Bearer ${getApiKey('openai')}`,
     },
     body: JSON.stringify({ model, input: text }),
   });

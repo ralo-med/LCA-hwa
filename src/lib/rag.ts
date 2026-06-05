@@ -1,35 +1,43 @@
-import { EMBEDDING_MODEL, TEXT_MODEL, isOpenAIConfigured } from '@/constants';
+import { EMBEDDING_MODEL, TEXT_MODEL } from "@/constants";
+import { isOpenAIAvailable } from "@/lib/llm-settings";
 import {
   callOpenAIEmbed,
   callOpenAIChat,
   type OpenAIChatMessage,
-} from '@/lib/openai';
-import { histologyLabel } from '@/lib/utils';
+} from "@/lib/openai";
+import {
+  biomarkerSearchHint,
+  buildPatientContextBlock,
+  type GuidePatientContext,
+} from "@/lib/guide-patient-context";
+import { histologyLabel } from "@/lib/utils";
+
+export type { GuidePatientContext } from "@/lib/guide-patient-context";
 import type {
   GuideAnswerType,
   GuideChatMessage,
   GuideChatSource,
   GuideSearchMode,
   Histology,
-} from '@/types';
+} from "@/types";
 
-export type GuideDocId = 'metastatic' | 'earlystage' | 'sclc';
+export type GuideDocId = "metastatic" | "earlystage" | "sclc";
 
 export const GUIDE_DOC_META: Record<
   GuideDocId,
   { fileName: string; title: string }
 > = {
   metastatic: {
-    fileName: 'lung-metastatic-patient.pdf',
-    title: '전이성 폐암 환자 안내',
+    fileName: "lung-metastatic-patient.pdf",
+    title: "전이성 폐암 환자 안내",
   },
   earlystage: {
-    fileName: 'lung-early-stage-patient.pdf',
-    title: '조기 폐암 환자 안내',
+    fileName: "lung-early-stage-patient.pdf",
+    title: "조기 폐암 환자 안내",
   },
   sclc: {
-    fileName: 'SCLC-patient-guideline.pdf',
-    title: '소세포폐암 환자 가이드라인',
+    fileName: "SCLC-patient-guideline.pdf",
+    title: "소세포폐암 환자 가이드라인",
   },
 };
 
@@ -52,8 +60,7 @@ export interface GuideChunkStore {
 }
 
 const SCLC_QUERY = /소세포|SCLC|small\s*cell/i;
-const EARLY_STAGE_QUERY =
-  /초기|조기|early\s*stage|1기|2기|stage\s*[12]|수술/i;
+const EARLY_STAGE_QUERY = /초기|조기|early\s*stage|1기|2기|stage\s*[12]|수술/i;
 const METASTATIC_QUERY = /전이|전이성|metastatic|4기|stage\s*iv/i;
 const NSCLC_GENERAL =
   /비소세포|NSCLC|선암|편평|대세포|기관지|squamous|adenocarcinoma/i;
@@ -94,7 +101,10 @@ function keywordScore(query: string, text: string): number {
     .split(/[^\p{L}\p{N}]+/u)
     .filter((t) => t.length > 1);
   const lower = text.toLowerCase();
-  return terms.reduce((score, term) => score + (lower.includes(term) ? 1 : 0), 0);
+  return terms.reduce(
+    (score, term) => score + (lower.includes(term) ? 1 : 0),
+    0,
+  );
 }
 
 export interface RetrievedChunk {
@@ -113,9 +123,11 @@ let storeCache: GuideChunkStore | null = null;
 
 export async function loadGuideChunks(): Promise<GuideChunkStore> {
   if (storeCache) return storeCache;
-  const res = await fetch('/data/guide-chunks.json');
+  const res = await fetch("/data/guide-chunks.json");
   if (!res.ok) {
-    throw new Error('가이드 데이터를 불러오지 못했습니다. npm run embed-pdfs를 실행해 주세요.');
+    throw new Error(
+      "가이드 데이터를 불러오지 못했습니다. npm run embed-pdfs를 실행해 주세요.",
+    );
   }
   storeCache = (await res.json()) as GuideChunkStore;
   return storeCache;
@@ -140,26 +152,26 @@ export function resolveTargetDocs(
 ): GuideDocId[] {
   const docs: GuideDocId[] = [];
 
-  if (SCLC_QUERY.test(query)) docs.push('sclc');
-  if (EARLY_STAGE_QUERY.test(query)) docs.push('earlystage');
-  if (METASTATIC_QUERY.test(query)) docs.push('metastatic');
+  if (SCLC_QUERY.test(query)) docs.push("sclc");
+  if (EARLY_STAGE_QUERY.test(query)) docs.push("earlystage");
+  if (METASTATIC_QUERY.test(query)) docs.push("metastatic");
 
   if (BIOMARKER_QUERY.test(query)) {
-    docs.push('metastatic');
-    if (histology !== 'smallcell') docs.push('earlystage');
+    docs.push("metastatic");
+    if (histology !== "smallcell") docs.push("earlystage");
   }
 
-  if (NUTRITION_QUERY.test(query) && !docs.includes('earlystage')) {
-    docs.unshift('earlystage');
+  if (NUTRITION_QUERY.test(query) && !docs.includes("earlystage")) {
+    docs.unshift("earlystage");
   }
 
   if (NSCLC_GENERAL.test(query) && docs.length === 0) {
-    docs.push('earlystage', 'metastatic');
+    docs.push("earlystage", "metastatic");
   }
 
   if (docs.length === 0) {
-    if (histology === 'smallcell') docs.push('sclc');
-    else docs.push('earlystage', 'metastatic');
+    if (histology === "smallcell") docs.push("sclc");
+    else docs.push("earlystage", "metastatic");
   }
 
   return [...new Set(docs)];
@@ -173,43 +185,50 @@ function docBoost(targetDocs: GuideDocId[], docId: GuideDocId): number {
 
 function topicSearchHint(query: string): string {
   if (NUTRITION_QUERY.test(query)) {
-    return 'nutrition diet registered dietitian healthy eating weight management supportive care survivorship healthy living';
+    return "nutrition diet registered dietitian healthy eating weight management supportive care survivorship healthy living";
   }
   if (SUPPORTIVE_CARE_QUERY.test(query)) {
-    return 'supportive care palliative care side effects symptom management nausea fatigue';
+    return "supportive care palliative care side effects symptom management nausea fatigue";
   }
   if (OVERVIEW_QUERY.test(query)) {
-    return 'primary treatment planning staging surgery radiation chemotherapy definitive chemoradiation clinical stage treatment options';
+    return "primary treatment planning staging surgery radiation chemotherapy definitive chemoradiation clinical stage treatment options";
   }
   if (BIOMARKER_QUERY.test(query)) {
-    return 'PD-L1 immunotherapy immune checkpoint inhibitor pembrolizumab nivolumab durvalumab biomarker expression';
+    return "PD-L1 immunotherapy immune checkpoint inhibitor pembrolizumab nivolumab durvalumab biomarker expression";
   }
   if (TREATMENT_METHOD_QUERY.test(query)) {
-    return 'surgery lobectomy pneumonectomy radiation chemotherapy chemoradiation adjuvant definitive treatment';
+    return "surgery lobectomy pneumonectomy radiation chemotherapy chemoradiation adjuvant definitive treatment";
   }
   if (MY_DISEASE_QUERY.test(query)) {
-    return 'histology adenocarcinoma squamous cell stage staging TNM primary treatment clinical stage';
+    return "histology adenocarcinoma squamous cell stage staging TNM primary treatment clinical stage";
   }
   if (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) {
-    return 'small cell lung cancer SCLC limited stage extensive stage initial treatment chemoradiation chemoimmunotherapy platinum durvalumab';
+    return "small cell lung cancer SCLC limited stage extensive stage initial treatment chemoradiation chemoimmunotherapy platinum durvalumab";
   }
   if (DAILY_LIVING_QUERY.test(query)) {
-    return 'supportive care quality of life daily living fatigue infection hygiene exercise nutrition emotional support rest symptom management';
+    return "supportive care quality of life daily living fatigue infection hygiene exercise nutrition emotional support rest symptom management";
   }
   if (SUN_UV_QUERY.test(query)) {
-    return 'sunscreen ultraviolet sun exposure healthy living skin cancer prevention survivorship';
+    return "sunscreen ultraviolet sun exposure healthy living skin cancer prevention survivorship";
   }
-  return '';
+  return "";
 }
 
 function topicKeywordBoost(query: string, text: string): number {
   if (NUTRITION_QUERY.test(query)) {
     let boost = 0;
-    if (/healthful foods|healthy living|Common goals for healthy living/i.test(text)) {
+    if (
+      /healthful foods|healthy living|Common goals for healthy living/i.test(
+        text,
+      )
+    ) {
       boost += 0.22;
     }
     if (/managing body weight|body weight/i.test(text)) boost += 0.08;
-    if (/registered dietitian/i.test(text) && !/healthful foods|healthy living/i.test(text)) {
+    if (
+      /registered dietitian/i.test(text) &&
+      !/healthful foods|healthy living/i.test(text)
+    ) {
       boost -= 0.12;
     }
     return boost;
@@ -238,7 +257,11 @@ function topicKeywordBoost(query: string, text: string): number {
   }
   if (TREATMENT_METHOD_QUERY.test(query)) {
     let boost = 0;
-    if (/Treating lung cancer with surgery|Surgery is a standard treatment/i.test(text)) {
+    if (
+      /Treating lung cancer with surgery|Surgery is a standard treatment/i.test(
+        text,
+      )
+    ) {
       boost += 0.16;
     }
     if (/lobectomy|pneumonectomy|wedge resection/i.test(text)) boost += 0.1;
@@ -248,7 +271,9 @@ function topicKeywordBoost(query: string, text: string): number {
   if (DAILY_LIVING_QUERY.test(query)) {
     let boost = 0;
     if (/supportive care|quality of life/i.test(text)) boost += 0.18;
-    if (/fatigue|infection|hygiene|exercise|nutrition|emotional|rest/i.test(text)) {
+    if (
+      /fatigue|infection|hygiene|exercise|nutrition|emotional|rest/i.test(text)
+    ) {
       boost += 0.1;
     }
     if (OFF_TOPIC_EXCERPT.test(text)) boost -= 0.25;
@@ -376,11 +401,11 @@ function getTopicPatterns(query: string): RegExp[] {
 
 function normalizePageText(text: string): string {
   return text
-    .replace(/\[[^\]]+\]\n?/g, '')
-    .replace(/NCCN Guidelines for Patients[^\n]*\n?/gi, '')
-    .replace(/Early & Locally Advanced Non-Small Cell Lung Cancer/gi, '')
-    .replace(/[•\u0086\u2020\u2021]/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/\[[^\]]+\]\n?/g, "")
+    .replace(/NCCN Guidelines for Patients[^\n]*\n?/gi, "")
+    .replace(/Early & Locally Advanced Non-Small Cell Lung Cancer/gi, "")
+    .replace(/[•\u0086\u2020\u2021]/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -396,7 +421,9 @@ function isCoverOrFrontMatter(text: string): boolean {
   if (
     clean.length < 280 &&
     /NCCN Guidelines for Patients/i.test(clean) &&
-    !/Initial treatment|supportive care|healthy living|healthful foods/i.test(clean)
+    !/Initial treatment|supportive care|healthy living|healthful foods/i.test(
+      clean,
+    )
   ) {
     return true;
   }
@@ -463,12 +490,20 @@ function isGenericBoilerplateExcerpt(excerpt: string): boolean {
   return GENERIC_BOILERPLATE.test(excerpt);
 }
 
-function retrievalScoreAdjust(text: string, page: number, query: string): number {
+function retrievalScoreAdjust(
+  text: string,
+  page: number,
+  query: string,
+): number {
   let adjust = 0;
   if (isNavigationOrTocText(text)) adjust -= 0.3;
   if (isCoverOrFrontMatter(text)) adjust -= 0.28;
   if (page <= 6) adjust -= 0.08;
-  if (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query) && page <= 12) {
+  if (
+    SCLC_QUERY.test(query) &&
+    TREATMENT_METHOD_QUERY.test(query) &&
+    page <= 12
+  ) {
     adjust -= 0.1;
   }
   if (GENERIC_BOILERPLATE.test(text)) adjust -= 0.22;
@@ -480,10 +515,8 @@ function retrievalScoreAdjust(text: string, page: number, query: string): number
   return adjust + topicKeywordBoost(query, text);
 }
 
-function extractConversationTopic(
-  priorHistory: GuideChatMessage[],
-): string {
-  const userMsgs = priorHistory.filter((m) => m.role === 'user');
+function extractConversationTopic(priorHistory: GuideChatMessage[]): string {
+  const userMsgs = priorHistory.filter((m) => m.role === "user");
   for (let i = userMsgs.length - 1; i >= 0; i--) {
     const text = userMsgs[i]!.text;
     if (
@@ -494,7 +527,7 @@ function extractConversationTopic(
       return text;
     }
   }
-  return userMsgs[userMsgs.length - 1]?.text ?? '';
+  return userMsgs[userMsgs.length - 1]?.text ?? "";
 }
 
 export function buildRetrievalQuery(
@@ -516,9 +549,7 @@ export function buildRetrievalQuery(
   return query;
 }
 
-function getRecentlyCitedPages(
-  priorHistory: GuideChatMessage[],
-): Set<string> {
+function getRecentlyCitedPages(priorHistory: GuideChatMessage[]): Set<string> {
   const pages = new Set<string>();
   for (const msg of priorHistory.slice(-8)) {
     for (const source of msg.sources ?? []) {
@@ -629,11 +660,11 @@ export function resolveAnswerSources(
   answerType: GuideAnswerType;
 } {
   if (!usedGuidelineSearch) {
-    return { sources: [], answerType: 'chat' };
+    return { sources: [], answerType: "chat" };
   }
 
   if (answerDeniesGuidelineRelevance(answer)) {
-    return { sources: [], answerType: 'general' };
+    return { sources: [], answerType: "general" };
   }
 
   const displayCitations = filterDisplayCitations(citations, retrievalQuery);
@@ -642,31 +673,35 @@ export function resolveAnswerSources(
     displayCitations.length > 0 &&
     shouldShowCitations(answer, displayCitations, retrievalQuery)
   ) {
-    return { sources: displayCitations, answerType: 'guideline' };
+    return { sources: displayCitations, answerType: "guideline" };
   }
 
-  return { sources: [], answerType: 'general' };
+  return { sources: [], answerType: "general" };
 }
 
 function trimToWordBoundary(text: string): string {
   const trimmed = text.trim();
-  const space = trimmed.indexOf(' ');
+  const space = trimmed.indexOf(" ");
   if (space > 0 && space < 25 && /^[a-z]/.test(trimmed)) {
     return trimmed.slice(space + 1);
   }
   return trimmed;
 }
 
-function extractSentenceWindow(clean: string, idx: number, maxLen: number): string {
+function extractSentenceWindow(
+  clean: string,
+  idx: number,
+  maxLen: number,
+): string {
   let start = Math.max(
-    clean.lastIndexOf('. ', idx),
-    clean.lastIndexOf('? ', idx),
-    clean.lastIndexOf('! ', idx),
+    clean.lastIndexOf(". ", idx),
+    clean.lastIndexOf("? ", idx),
+    clean.lastIndexOf("! ", idx),
   );
   start = start >= 0 ? start + 2 : Math.max(0, idx - 60);
 
   let end = clean.length;
-  for (const punct of ['. ', '? ', '! ']) {
+  for (const punct of [". ", "? ", "! "]) {
     const pos = clean.indexOf(punct, idx + 20);
     if (pos >= 0 && pos < end) end = pos + 1;
   }
@@ -711,8 +746,7 @@ function extractRelevantExcerpt(
     .map((sentence) => ({
       sentence,
       score: terms.reduce(
-        (sum, term) =>
-          sum + (sentence.toLowerCase().includes(term) ? 1 : 0),
+        (sum, term) => sum + (sentence.toLowerCase().includes(term) ? 1 : 0),
         0,
       ),
     }))
@@ -773,48 +807,54 @@ function buildSearchQuery(
 ): string {
   const hints = targetDocs
     .map((id) => {
-      if (id === 'sclc') {
-        return 'NCCN Guidelines for Patients Small Cell Lung Cancer SCLC treatment stages chemotherapy radiation immunotherapy';
+      if (id === "sclc") {
+        return "NCCN Guidelines for Patients Small Cell Lung Cancer SCLC treatment stages chemotherapy radiation immunotherapy";
       }
-      if (id === 'metastatic') {
-        return 'NCCN Guidelines for Patients Metastatic Non-Small Cell Lung Cancer NSCLC treatment';
+      if (id === "metastatic") {
+        return "NCCN Guidelines for Patients Metastatic Non-Small Cell Lung Cancer NSCLC treatment";
       }
-      if (id === 'earlystage') {
-        return 'NCCN Guidelines for Patients Early Stage Non-Small Cell Lung Cancer NSCLC surgery radiation chemotherapy';
+      if (id === "earlystage") {
+        return "NCCN Guidelines for Patients Early Stage Non-Small Cell Lung Cancer NSCLC surgery radiation chemotherapy";
       }
-      return '';
+      return "";
     })
     .filter(Boolean)
-    .join('\n');
+    .join("\n");
   const topicHint = topicSearchHint(query);
-  return [englishQuery, hints, topicHint].filter(Boolean).join('\n');
+  return [englishQuery, hints, topicHint].filter(Boolean).join("\n");
 }
 
 async function translateQueryForRetrieval(
   query: string,
-  histology: Histology,
+  patientContext: GuidePatientContext,
   targetDocs: GuideDocId[],
   priorHistory: GuideChatMessage[],
 ): Promise<string> {
-  const hLabel = histologyLabel(histology);
+  const { profile } = patientContext;
+  const hLabel = histologyLabel(profile.histology);
   const docHint = targetDocs
     .map((id) => GUIDE_DOC_META[id].fileName)
-    .join(', ');
+    .join(", ");
+  const biomarkerHint = biomarkerSearchHint(profile);
   const recentContext = priorHistory
     .slice(-4)
-    .map((m) => `${m.role === 'user' ? 'Patient' : 'Assistant'}: ${m.text}`)
-    .join('\n');
+    .map((m) => `${m.role === "user" ? "Patient" : "Assistant"}: ${m.text}`)
+    .join("\n");
+
+  if (!isOpenAIAvailable()) {
+    return query;
+  }
 
   const translated = await callOpenAIChat(
     [
       {
-        role: 'system',
+        role: "system",
         content:
-          'Translate Korean patient questions into a concise English search query for NCCN lung cancer patient guideline PDFs. Include specific medical terms from the current AND prior conversation when relevant. Output ONLY the English query.',
+          "Translate Korean patient questions into a concise English search query for NCCN lung cancer patient guideline PDFs. Include specific medical terms from the current AND prior conversation when relevant. Output ONLY the English query.",
       },
       {
-        role: 'user',
-        content: `Patient histology: ${hLabel}\nTarget PDFs: ${docHint}\nRecent conversation:\n${recentContext || '(none)'}\nCurrent Korean question: ${query}`,
+        role: "user",
+        content: `Patient histology: ${hLabel}${biomarkerHint ? `\nBiomarkers: ${biomarkerHint}` : ""}\nTarget PDFs: ${docHint}\nRecent conversation:\n${recentContext || "(none)"}\nCurrent Korean question: ${query}`,
       },
     ],
     TEXT_MODEL,
@@ -823,7 +863,10 @@ async function translateQueryForRetrieval(
   return translated.trim() || query;
 }
 
-function filterChunkPool(chunks: GuideChunk[], targetDocs: GuideDocId[]): GuideChunk[] {
+function filterChunkPool(
+  chunks: GuideChunk[],
+  targetDocs: GuideDocId[],
+): GuideChunk[] {
   return chunks.filter((c) => targetDocs.includes(c.docId));
 }
 
@@ -841,7 +884,11 @@ function selectTopPages(
       if (seen.has(key)) continue;
 
       const fileKey = `${GUIDE_DOC_META[item.chunk.docId].fileName}:${item.chunk.page}`;
-      if (skipRecent && recentPages.has(fileKey) && selected.length < topPages - 1) {
+      if (
+        skipRecent &&
+        recentPages.has(fileKey) &&
+        selected.length < topPages - 1
+      ) {
         continue;
       }
 
@@ -884,13 +931,13 @@ function getPageText(
   query: string,
 ): string {
   const chunks = pool.filter((c) => c.docId === docId && c.page === page);
-  if (chunks.length === 0) return '';
+  if (chunks.length === 0) return "";
 
   const withSignal = chunks.find((c) => hasTopicSignal(query, c.text));
   if (withSignal) return normalizePageText(withSignal.text);
 
   const normalized = chunks.map((c) => normalizePageText(c.text));
-  return normalized.sort((a, b) => b.length - a.length)[0] ?? '';
+  return normalized.sort((a, b) => b.length - a.length)[0] ?? "";
 }
 
 export function buildCitations(
@@ -932,7 +979,10 @@ export function buildCitations(
 
   const excerptPriority = (excerpt: string): number => {
     if (BIOMARKER_QUERY.test(query) && /PD-L1/i.test(excerpt)) return 0;
-    if (NUTRITION_QUERY.test(query) && /healthful foods|healthy living/i.test(excerpt)) {
+    if (
+      NUTRITION_QUERY.test(query) &&
+      /healthful foods|healthy living/i.test(excerpt)
+    ) {
       return 0;
     }
     if (
@@ -944,7 +994,10 @@ export function buildCitations(
     ) {
       return 0;
     }
-    if (TREATMENT_METHOD_QUERY.test(query) && /surgery|lobectomy/i.test(excerpt)) {
+    if (
+      TREATMENT_METHOD_QUERY.test(query) &&
+      /surgery|lobectomy/i.test(excerpt)
+    ) {
       return 0;
     }
     if (isCoverOrFrontMatter(excerpt)) return 8;
@@ -1004,14 +1057,17 @@ export function isOffTopicQuery(query: string): boolean {
   if (OFF_TOPIC_QUERY.test(trimmed) && !MEDICAL_SIGNAL.test(trimmed)) {
     return true;
   }
-  if (OFF_TOPIC_QUERY.test(trimmed) && !/폐|lung|암\s*치료|nsclc|sclc/i.test(trimmed)) {
+  if (
+    OFF_TOPIC_QUERY.test(trimmed) &&
+    !/폐|lung|암\s*치료|nsclc|sclc/i.test(trimmed)
+  ) {
     return true;
   }
   return false;
 }
 
 export function isChitchatQuery(query: string): boolean {
-  const trimmed = query.trim().replace(/[?!.。？！]/g, '');
+  const trimmed = query.trim().replace(/[?!.。？！]/g, "");
 
   if (isOffTopicQuery(query)) return true;
 
@@ -1041,15 +1097,15 @@ export function shouldSearchGuidelines(
   mode: GuideSearchMode,
   priorHistory: GuideChatMessage[] = [],
 ): boolean {
-  if (mode === 'chat') return false;
+  if (mode === "chat") return false;
   if (isOffTopicQuery(query)) return false;
   if (isChitchatQuery(query)) return false;
-  if (mode === 'search') return true;
+  if (mode === "search") return true;
 
   if (GUIDELINE_FOLLOWUP_QUERY.test(query)) return true;
   if (MEDICAL_SIGNAL.test(query)) return true;
 
-  const lastUser = [...priorHistory].reverse().find((m) => m.role === 'user');
+  const lastUser = [...priorHistory].reverse().find((m) => m.role === "user");
   if (lastUser && query.length < 45 && MEDICAL_SIGNAL.test(lastUser.text)) {
     return true;
   }
@@ -1059,19 +1115,16 @@ export function shouldSearchGuidelines(
 
 function toOpenAIHistory(history: GuideChatMessage[]): OpenAIChatMessage[] {
   return history.slice(-MAX_HISTORY_TURNS).map((message) => ({
-    role: message.role === 'user' ? 'user' : 'assistant',
+    role: message.role === "user" ? "user" : "assistant",
     content: message.text,
   }));
 }
 
 export function stripInlineGuidelineSection(text: string): string {
   return text
-    .replace(
-      /#{1,3}\s*(가이드라인\s*원문|직역|가이드라인에서)[\s\S]*$/im,
-      '',
-    )
-    .replace(/\*\*가이드라인에서 확인된 내용\*\*[\s\S]*$/im, '')
-    .replace(/\n{3,}/g, '\n\n')
+    .replace(/#{1,3}\s*(가이드라인\s*원문|직역|가이드라인에서)[\s\S]*$/im, "")
+    .replace(/\*\*가이드라인에서 확인된 내용\*\*[\s\S]*$/im, "")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
@@ -1086,29 +1139,31 @@ export function shouldShowCitations(
 }
 
 export async function embedText(text: string): Promise<number[]> {
-  if (!isOpenAIConfigured()) {
-    throw new Error('OPENAI_API_KEY_MISSING');
+  if (!isOpenAIAvailable()) {
+    throw new Error("OPENAI_API_KEY_MISSING");
   }
   return callOpenAIEmbed(text, EMBEDDING_MODEL);
 }
 
 export async function retrieveChunks(
   query: string,
-  histology: Histology,
+  patientContext: GuidePatientContext,
   topPages: number = 5,
   priorHistory: GuideChatMessage[] = [],
 ): Promise<RetrieveResult> {
+  const { profile } = patientContext;
   const store = await loadGuideChunks();
   const retrievalQuery = buildRetrievalQuery(query, priorHistory);
-  const targetDocs = resolveTargetDocs(retrievalQuery, histology);
+  const targetDocs = resolveTargetDocs(retrievalQuery, profile.histology);
   const pool = filterChunkPool(store.chunks, targetDocs);
   const recentPages = getRecentlyCitedPages(priorHistory);
 
-  const ranked = hasEmbeddings(store)
+  const canVectorSearch = hasEmbeddings(store) && isOpenAIAvailable();
+  const ranked = canVectorSearch
     ? await (async () => {
         const englishQuery = await translateQueryForRetrieval(
           retrievalQuery,
-          histology,
+          patientContext,
           targetDocs,
           priorHistory,
         );
@@ -1163,12 +1218,7 @@ export async function retrieveChunks(
     return aHit - bHit || a.page - b.page;
   });
 
-  const built = buildCitations(
-    hits,
-    pool,
-    retrievalQuery,
-    ranked.slice(0, 24),
-  );
+  const built = buildCitations(hits, pool, retrievalQuery, ranked.slice(0, 24));
   const citations = filterRelevantCitations(built, retrievalQuery);
 
   return {
@@ -1185,10 +1235,9 @@ export async function retrieveChunks(
 function formatExcerptSources(citations: GuideChatSource[]): string {
   return citations
     .map(
-      (c, i) =>
-        `[원문 ${i + 1}] ${c.fileName} · p.${c.page}\n"${c.excerpt}"`,
+      (c, i) => `[원문 ${i + 1}] ${c.fileName} · p.${c.page}\n"${c.excerpt}"`,
     )
-    .join('\n\n');
+    .join("\n\n");
 }
 
 const CHATBOT_PERSONA = `당신은 화순전남대학교병원 폐암 환자 안내 챗봇입니다.
@@ -1200,7 +1249,7 @@ const CHATBOT_PERSONA = `당신은 화순전남대학교병원 폐암 환자 안
 
 **공통**
 - 이전 대화 맥락을 반드시 이어갑니다. "그거", "가이드라인은?" 같은 후속 질문은 직전 주제를 기준으로 답합니다.
-- 환자 프로필(나이·성별·조직형)을 참고해 맞춤형으로 답합니다.
+- 대시보드에서 넘어온 환자 정보(나이·성별·조직형·유전자 변이·PD-L1)를 참고해 맞춤형으로 답합니다.
 - 대화체, 완결된 문장, 방어적 마무리·면책 반복 금지.
 - 목록은 \`1. **제목**: 설명\` 형식(한 줄에).`;
 
@@ -1233,32 +1282,32 @@ function fixDanglingEnding(text: string): string {
 
   result = result.replace(
     /(.+?)달라질\s*수\s*있기\s*때문에,?\s*$/i,
-    '$1달라질 수 있습니다.',
+    "$1달라질 수 있습니다.",
   );
 
   if (/(?:하며|되며|이며|으며|하는\s*데),?\s*\.?\s*$/i.test(result)) {
     const lastSentenceEnd = Math.max(
-      result.lastIndexOf('.'),
-      result.lastIndexOf('!'),
-      result.lastIndexOf('?'),
+      result.lastIndexOf("."),
+      result.lastIndexOf("!"),
+      result.lastIndexOf("?"),
     );
     if (lastSentenceEnd > 0) {
       result = result.slice(0, lastSentenceEnd + 1).trim();
     } else {
       result = result
-        .replace(/(?:중요한\s*역할을\s*)?하며,?\s*\.?\s*$/i, '합니다.')
-        .replace(/(?:하며|되며|이며|으며),?\s*\.?\s*$/i, '');
+        .replace(/(?:중요한\s*역할을\s*)?하며,?\s*\.?\s*$/i, "합니다.")
+        .replace(/(?:하며|되며|이며|으며),?\s*\.?\s*$/i, "");
     }
   }
 
   if (result && !/[.!?…]$/.test(result) && !/\d+\.\s*$/.test(result)) {
-    result += '.';
+    result += ".";
   }
   return result;
 }
 
 function cleanTrailingDefensive(para: string): string {
-  const lines = para.split('\n');
+  const lines = para.split("\n");
 
   while (lines.length > 0) {
     const last = lines[lines.length - 1]!.trim();
@@ -1273,7 +1322,7 @@ function cleanTrailingDefensive(para: string): string {
     break;
   }
 
-  let result = lines.join('\n').trim();
+  let result = lines.join("\n").trim();
   const tail = result.slice(Math.max(0, result.length - 220));
   if (isDefensiveSentence(tail)) {
     const cutAt = result.lastIndexOf(tail);
@@ -1289,61 +1338,55 @@ export function stripDefensiveClosing(text: string): string {
     if (idx !== paragraphs.length - 1) return para.trim();
     return cleanTrailingDefensive(para.trim());
   });
-  return cleaned.filter(Boolean).join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
-}
-
-function profileContextLine(profile: {
-  age: number;
-  gender: string;
-  histology: Histology;
-}): string {
-  const hLabel = histologyLabel(profile.histology);
-  const genderLabel = profile.gender === 'female' ? '여성' : '남성';
-  return `${profile.age}세 ${genderLabel}, 조직형 ${hLabel}`;
+  return cleaned
+    .filter(Boolean)
+    .join("\n\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 export function buildChitchatMessages(
   question: string,
-  profile: { age: number; gender: string; histology: Histology },
+  patientContext: GuidePatientContext,
   priorHistory: GuideChatMessage[] = [],
 ): OpenAIChatMessage[] {
   const offTopic = isOffTopicQuery(question);
   const offTopicHint = offTopic
     ? `\n- 질문 주제는 폐암 안내와 직접 관련이 없습니다. 2~3문장으로 정중히 답한 뒤, 폐암·치료·부작용·영양·일상 관리 질문을 도와드릴 수 있다고 짧게 안내하세요.`
-    : '';
+    : "";
 
   return [
     {
-      role: 'system',
+      role: "system",
       content: `${CHATBOT_PERSONA}
 
 인사·자기소개·감사·잡담에는 2~4문장으로 답하세요.${offTopicHint}
-현재 환자 프로필: ${profileContextLine(profile)}`,
+
+**현재 환자 정보 (대시보드)**
+${buildPatientContextBlock(patientContext)}`,
     },
     ...toOpenAIHistory(priorHistory),
-    { role: 'user', content: question },
+    { role: "user", content: question },
   ];
 }
 
 export function buildGeneralMedicalMessages(
   question: string,
-  profile: { age: number; gender: string; histology: Histology },
+  patientContext: GuidePatientContext,
   priorHistory: GuideChatMessage[] = [],
   retrievalQuery?: string,
 ): OpenAIChatMessage[] {
   const topic = extractConversationTopic(priorHistory);
   const contextHint =
-    topic && topic !== question
-      ? `\n\n(대화 맥락: 이전 주제 — ${topic})`
-      : '';
+    topic && topic !== question ? `\n\n(대화 맥락: 이전 주제 — ${topic})` : "";
   const followUpNoMatch =
     GUIDELINE_FOLLOWUP_QUERY.test(question) && topic
       ? `\n- 이 질문은 이전 주제(**${topic}**)에 대한 가이드라인 후속 질문입니다. PDF 원문에서 직접 맞는 내용이 없으므로, 일반 환자 교육 수준으로 답하되 가이드라인·원문 언급은 하지 마세요.`
-      : '';
+      : "";
 
   return [
     {
-      role: 'system',
+      role: "system",
       content: `${CHATBOT_PERSONA}
 
 이 질문은 NCCN 환자 안내 PDF에서 **직접 맞는 원문을 찾지 못했습니다**.
@@ -1352,19 +1395,20 @@ export function buildGeneralMedicalMessages(
 - "관련이 없어", "찾지 못했" 같은 메타 설명으로 시작하지 마세요. 바로 본론부터 답하세요.
 - 폐암 환자·보호자 관점에서 실질적으로 도움이 되게 답하세요.${followUpNoMatch}
 
-현재 환자 프로필: ${profileContextLine(profile)}`,
+**현재 환자 정보 (대시보드)**
+${buildPatientContextBlock(patientContext)}`,
     },
     ...toOpenAIHistory(priorHistory),
     {
-      role: 'user',
-      content: `${retrievalQuery && retrievalQuery !== question ? `[검색 맥락] ${retrievalQuery}\n\n` : ''}## 질문\n${question}${contextHint}`,
+      role: "user",
+      content: `${retrievalQuery && retrievalQuery !== question ? `[검색 맥락] ${retrievalQuery}\n\n` : ""}## 질문\n${question}${contextHint}`,
     },
   ];
 }
 
 export function buildRagMessages(
   question: string,
-  profile: { age: number; gender: string; histology: Histology },
+  patientContext: GuidePatientContext,
   citations: GuideChatSource[],
   priorHistory: GuideChatMessage[] = [],
 ): OpenAIChatMessage[] {
@@ -1372,14 +1416,14 @@ export function buildRagMessages(
 
   const formatHint = /(\d+)\s*줄|한\s*줄|두\s*줄|세\s*줄/.exec(question);
   const lineHint = formatHint
-    ? `\n- 사용자가 ${formatHint[1] ?? '요청한'}줄 형식을 요청했습니다. 그 줄 수에 맞게 **요약**하세요.`
-    : '';
+    ? `\n- 사용자가 ${formatHint[1] ?? "요청한"}줄 형식을 요청했습니다. 그 줄 수에 맞게 **요약**하세요.`
+    : "";
 
   const topic = extractConversationTopic(priorHistory);
   const followUpHint =
     GUIDELINE_FOLLOWUP_QUERY.test(question) && topic
       ? `\n- 이 질문은 이전 주제(**${topic}**)에 대한 가이드라인 후속 질문입니다. 이전 주제와 직접 관련된 원문만 사용하세요.`
-      : '';
+      : "";
 
   const answerGuide = `가이드라인 원문이 제공되었습니다.
 
@@ -1392,21 +1436,22 @@ export function buildRagMessages(
 
   return [
     {
-      role: 'system',
+      role: "system",
       content: `${CHATBOT_PERSONA}
 
 ${answerGuide}
 
-현재 환자 프로필: ${profileContextLine(profile)}`,
+**현재 환자 정보 (대시보드)**
+${buildPatientContextBlock(patientContext)}`,
     },
     ...toOpenAIHistory(priorHistory),
     {
-      role: 'user',
+      role: "user",
       content: `## 참고 원문
 ${sourceBlock}
 
 ## 질문
-${question}${topic && question !== topic ? `\n\n(대화 맥락: 이전 주제 — ${topic})` : ''}`,
+${question}${topic && question !== topic ? `\n\n(대화 맥락: 이전 주제 — ${topic})` : ""}`,
     },
   ];
 }
@@ -1446,9 +1491,9 @@ function citationsAreTrustworthy(
 
 export async function planChatResponse(
   question: string,
-  profile: { age: number; gender: string; histology: Histology },
+  patientContext: GuidePatientContext,
   priorHistory: GuideChatMessage[] = [],
-  guideMode: GuideSearchMode = 'auto',
+  guideMode: GuideSearchMode = "auto",
 ): Promise<ChatPlan> {
   const searchedGuidelines = shouldSearchGuidelines(
     question,
@@ -1458,7 +1503,7 @@ export async function planChatResponse(
 
   if (!searchedGuidelines) {
     return {
-      messages: buildChitchatMessages(question, profile, priorHistory),
+      messages: buildChitchatMessages(question, patientContext, priorHistory),
       citations: [],
       searchedGuidelines: false,
       retrievalQuery: question,
@@ -1468,7 +1513,7 @@ export async function planChatResponse(
   const retrievalQuery = buildRetrievalQuery(question, priorHistory);
   const retrieved = await retrieveChunks(
     question,
-    profile.histology,
+    patientContext,
     5,
     priorHistory,
   );
@@ -1479,16 +1524,12 @@ export async function planChatResponse(
 
   if (
     citations.length > 0 &&
-    citationsAreTrustworthy(
-      citations,
-      retrievalQuery,
-      retrieved.relevanceScore,
-    )
+    citationsAreTrustworthy(citations, retrievalQuery, retrieved.relevanceScore)
   ) {
     return {
       messages: buildRagMessages(
         question,
-        profile,
+        patientContext,
         citations,
         priorHistory,
       ),
@@ -1501,7 +1542,7 @@ export async function planChatResponse(
   return {
     messages: buildGeneralMedicalMessages(
       question,
-      profile,
+      patientContext,
       priorHistory,
       retrievalQuery,
     ),

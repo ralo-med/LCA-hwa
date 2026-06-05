@@ -5,16 +5,12 @@ import AppNav from '@/components/AppNav';
 import DashboardPage from '@/pages/DashboardPage';
 import GuideChatPage from '@/pages/GuideChatPage';
 import GuidePdfsPage from '@/pages/GuidePdfsPage';
-import { isOpenAIConfigured } from '@/constants';
-
 const App = () => {
-  const aiReady = isOpenAIConfigured();
-
   return (
     <TooltipProvider delayDuration={200}>
       <BrowserRouter>
         <div className="flex min-h-screen flex-col">
-          <AppNav aiReady={aiReady} />
+          <AppNav />
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<DashboardPage />} />

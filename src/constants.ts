@@ -1,4 +1,5 @@
 import type { MutationOption, Pdl1Option } from "./types";
+import { isOpenAIAvailable } from "@/lib/llm-settings";
 
 export const MUTATION_OPTIONS: MutationOption[] = [
   { id: "none", label: "변이 없음 / 미확인", bonus: 0 },
@@ -22,15 +23,10 @@ export const PDL1_OPTIONS: Pdl1Option[] = [
 ];
 
 export const TEXT_MODEL = "gpt-4o-mini";
-export const GUIDE_CHAT_MODEL = "gpt-4o";
+export const GUIDE_CHAT_MODEL = "gpt-5.4-nano";
 export const EMBEDDING_MODEL = "text-embedding-3-small";
 
-export const API_KEY: string =
-  import.meta.env.VITE_OPENAI_API_KEY?.trim() ?? "";
-
+/** @deprecated use isOpenAIAvailable() from llm-settings */
 export function isOpenAIConfigured(): boolean {
-  const key = API_KEY;
-  if (!key) return false;
-  if (/^your_/i.test(key) || key.includes("your_openai")) return false;
-  return key.startsWith("sk-");
+  return isOpenAIAvailable();
 }
