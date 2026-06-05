@@ -163,6 +163,15 @@ async function main() {
     chunks: allChunks,
   };
 
+  const publicPdfDir = path.join(ROOT, 'public', 'pdfs');
+  await fs.mkdir(publicPdfDir, { recursive: true });
+  for (const doc of DOCS) {
+    await fs.copyFile(
+      path.join(pdfDir, doc.file),
+      path.join(publicPdfDir, doc.file),
+    );
+  }
+
   const outPath = path.join(ROOT, 'public', 'data', 'guide-chunks.json');
   await fs.writeFile(outPath, JSON.stringify(output));
   const sizeMb = (Buffer.byteLength(JSON.stringify(output)) / 1024 / 1024).toFixed(2);

@@ -1,11 +1,11 @@
 import { type FormEvent, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowLeft,
-  BookOpen,
+  ChevronRight,
   Loader2,
   MessageSquare,
   MessageSquareText,
+  RotateCcw,
   Search,
   Send,
   Sparkles,
@@ -14,7 +14,6 @@ import { ChatMarkdown } from '@/components/chat-markdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { useGuideChat } from '@/hooks/useGuideChat';
 import { usePatientProfile } from '@/hooks/usePatientProfile';
 import { isOpenAIConfigured } from '@/constants';
@@ -70,28 +69,8 @@ const GuideChatPage = () => {
       : '답변 작성 중...';
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto flex min-h-screen max-w-3xl flex-col p-4 md:p-8">
-        <header className="mb-6 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/" aria-label="대시보드로 돌아가기">
-                <ArrowLeft />
-              </Link>
-            </Button>
-            <div>
-              <h1 className="flex items-center gap-2 text-xl font-bold md:text-2xl">
-                <BookOpen className="h-6 w-6 text-primary" />
-                환자 안내 챗봇
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                폐암 환자 가이드라인 PDF 기반 Q&amp;A
-              </p>
-            </div>
-          </div>
-          <ThemeToggle />
-        </header>
-
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-background text-foreground">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col p-4 md:p-8">
         <Card className="mb-4 border-dashed">
           <CardContent className="py-3 text-sm text-muted-foreground">
             <span className="font-medium text-foreground">현재 프로필:</span>{' '}
@@ -110,18 +89,30 @@ const GuideChatPage = () => {
           </div>
         )}
 
-        <Card className="flex flex-1 flex-col">
-          <CardHeader className="pb-3">
+        <Card className="flex min-h-0 flex-1 flex-col">
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <MessageSquare className="h-5 w-5 text-primary" />
               가이드라인 기반 상담
             </CardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 gap-1.5 text-xs"
+              onClick={chat.reset}
+              disabled={chat.isChatting || chat.history.length === 0}
+              aria-label="채팅 초기화"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              채팅 초기화
+            </Button>
           </CardHeader>
 
-          <CardContent className="flex flex-1 flex-col gap-4">
-            <div className="custom-scrollbar min-h-[420px] flex-1 space-y-4 overflow-y-auto rounded-lg border bg-muted/30 p-4">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
+            <div className="custom-scrollbar min-h-[min(28rem,55vh)] flex-1 space-y-4 overflow-y-auto rounded-lg border bg-muted/30 p-4">
               {chat.history.length === 0 && (
-                <div className="space-y-4 py-6 text-center">
+                <div className="flex min-h-[min(24rem,48vh)] flex-col items-center justify-center space-y-4 text-center">
                   <p className="text-sm text-muted-foreground">
                     자동 모드에서는 평소엔 대화하고, 폐암·치료 질문일 때만
                     가이드라인을 찾아 답해요.
@@ -191,25 +182,31 @@ const GuideChatPage = () => {
                       msg.answerType === 'guideline' &&
                       msg.sources &&
                       msg.sources.length > 0 && (
-                      <div className="max-w-[90%] space-y-2 rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2.5 dark:border-amber-900/60 dark:bg-amber-950/35">
-                        <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                      <details className="group w-full max-w-[90%] rounded-lg border border-amber-200/80 bg-amber-50/90 dark:border-amber-900/60 dark:bg-amber-950/35">
+                        <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2.5 text-xs font-semibold text-amber-900 marker:content-none dark:text-amber-200 [&::-webkit-details-marker]:hidden">
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" />
                           가이드라인 원문
-                        </p>
-                        {msg.sources.map((s, idx) => (
-                          <div
-                            key={idx}
-                            className="rounded-md border border-amber-200/60 bg-white/70 px-2.5 py-2 text-xs dark:border-amber-900/40 dark:bg-amber-950/20"
-                          >
-                            <p className="font-mono text-[11px] text-amber-800/80 dark:text-amber-300/80">
-                              {s.fileName}
-                              <span className="mx-1">·</span>p.{s.page}
-                            </p>
-                            <p className="mt-1 leading-relaxed text-amber-950/90 dark:text-amber-50/90">
-                              {s.excerpt}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+                          <span className="font-normal text-amber-800/70 dark:text-amber-300/70">
+                            ({msg.sources.length})
+                          </span>
+                        </summary>
+                        <div className="space-y-2 border-t border-amber-200/60 px-3 py-2.5 dark:border-amber-900/40">
+                          {msg.sources.map((s, idx) => (
+                            <div
+                              key={idx}
+                              className="rounded-md border border-amber-200/60 bg-white/70 px-2.5 py-2 text-xs dark:border-amber-900/40 dark:bg-amber-950/20"
+                            >
+                              <p className="font-mono text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                                {s.fileName}
+                                <span className="mx-1">·</span>p.{s.page}
+                              </p>
+                              <p className="mt-1 leading-relaxed text-amber-950/90 dark:text-amber-50/90">
+                                {s.excerpt}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
                     )}
                   </div>
                 );

@@ -111,11 +111,19 @@ export function useGuideChat(profile: PatientProfile) {
     }
   };
 
+  const reset = () => {
+    if (isChatting) return;
+    setHistory([]);
+    setInput('');
+    setLoadingPhase('idle');
+  };
+
   return {
     history,
     input,
     setInput,
     send,
+    reset,
     isChatting,
     loadingPhase,
     guideMode,
