@@ -36,6 +36,17 @@ export function buildOpenAiTokenLimit(
   return { [key]: maxTokens };
 }
 
+async function readOpenAIErrorMessage(response: Response): Promise<string> {
+  try {
+    const data = (await response.json()) as {
+      error?: { message?: string };
+    };
+    return data.error?.message?.trim() ?? '';
+  } catch {
+    return '';
+  }
+}
+
 export async function callOpenAIChat(
   messages: OpenAIChatMessage[],
   model: string,
@@ -69,7 +80,12 @@ export async function callOpenAIChat(
       }
 
       if (i === retries) {
-        throw new Error(`OpenAI API failed (${response.status})`);
+        const detail = await readOpenAIErrorMessage(response);
+        throw new Error(
+          detail
+            ? `OpenAI API failed (${response.status}): ${detail}`
+            : `OpenAI API failed (${response.status})`,
+        );
       }
       await new Promise<void>((r) => setTimeout(r, Math.pow(2, i) * 1000));
     } catch (err) {

@@ -79,6 +79,19 @@ async function dispatchChat(
   }
 }
 
+async function readApiErrorMessage(response: Response): Promise<string> {
+  try {
+    const data = (await response.json()) as {
+      error?: { message?: string; code?: string };
+    };
+    const msg = data.error?.message?.trim();
+    if (msg) return msg;
+  } catch {
+    /* ignore */
+  }
+  return '';
+}
+
 async function callOpenAI(
   model: string,
   messages: LlmChatMessage[],
@@ -101,7 +114,12 @@ async function callOpenAI(
   });
 
   if (!response.ok) {
-    throw new Error(`OpenAI API failed (${response.status})`);
+    const detail = await readApiErrorMessage(response);
+    throw new Error(
+      detail
+        ? `OpenAI API failed (${response.status}): ${detail}`
+        : `OpenAI API failed (${response.status})`,
+    );
   }
 
   const data = await response.json();
