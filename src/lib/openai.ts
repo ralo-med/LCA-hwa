@@ -1,4 +1,5 @@
 import { getApiKey, isOpenAIAvailable } from '@/lib/llm-settings';
+import { resolveOpenAiTokenLimitKey } from '@/lib/llm-models';
 
 const BASE_URL = 'https://api.openai.com/v1';
 
@@ -21,18 +22,16 @@ export interface OpenAIChatOptions {
   maxTokens?: number;
 }
 
-/** GPT-5 / o-series는 max_tokens 대신 max_completion_tokens 필요 */
+/** @deprecated resolveOpenAiTokenLimitKey 사용 */
 export function openAiUsesMaxCompletionTokens(model: string): boolean {
-  return /^(gpt-5|o[134](-|$))/i.test(model);
+  return resolveOpenAiTokenLimitKey(model) === 'max_completion_tokens';
 }
 
 export function buildOpenAiTokenLimit(
   model: string,
   maxTokens: number,
 ): Record<string, number> {
-  const key = openAiUsesMaxCompletionTokens(model)
-    ? 'max_completion_tokens'
-    : 'max_tokens';
+  const key = resolveOpenAiTokenLimitKey(model);
   return { [key]: maxTokens };
 }
 

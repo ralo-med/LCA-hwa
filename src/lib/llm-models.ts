@@ -1,5 +1,8 @@
 export type LlmProvider = 'openai' | 'google' | 'anthropic';
 
+/** OpenAI Chat Completions 출력 토큰 파라미터 — 모델마다 다름 */
+export type OpenAiTokenLimitKey = 'max_tokens' | 'max_completion_tokens';
+
 export interface ChatModelOption {
   id: string;
   provider: LlmProvider;
@@ -8,6 +11,8 @@ export interface ChatModelOption {
   inputPricePerM: number;
   /** USD per 1M output tokens */
   outputPricePerM: number;
+  /** OpenAI 전용 — GPT-5·o 시리즈는 max_completion_tokens */
+  openAiTokenLimitKey?: OpenAiTokenLimitKey;
 }
 
 export const PROVIDER_LABELS: Record<LlmProvider, string> = {
@@ -24,6 +29,7 @@ export const CHAT_MODELS: ChatModelOption[] = [
     label: 'GPT-5.5',
     inputPricePerM: 5,
     outputPricePerM: 30,
+    openAiTokenLimitKey: 'max_completion_tokens',
   },
   {
     id: 'gpt-5.5-pro',
@@ -31,6 +37,7 @@ export const CHAT_MODELS: ChatModelOption[] = [
     label: 'GPT-5.5 Pro',
     inputPricePerM: 30,
     outputPricePerM: 180,
+    openAiTokenLimitKey: 'max_completion_tokens',
   },
   {
     id: 'gpt-5.4',
@@ -38,6 +45,7 @@ export const CHAT_MODELS: ChatModelOption[] = [
     label: 'GPT-5.4',
     inputPricePerM: 2.5,
     outputPricePerM: 15,
+    openAiTokenLimitKey: 'max_completion_tokens',
   },
   {
     id: 'gpt-5.4-mini',
@@ -45,6 +53,7 @@ export const CHAT_MODELS: ChatModelOption[] = [
     label: 'GPT-5.4 mini',
     inputPricePerM: 0.75,
     outputPricePerM: 4.5,
+    openAiTokenLimitKey: 'max_completion_tokens',
   },
   {
     id: 'gpt-5.4-nano',
@@ -52,6 +61,7 @@ export const CHAT_MODELS: ChatModelOption[] = [
     label: 'GPT-5.4 nano',
     inputPricePerM: 0.2,
     outputPricePerM: 1.25,
+    openAiTokenLimitKey: 'max_completion_tokens',
   },
   // Google — Gemini 3.x / 2.5
   {
@@ -144,4 +154,15 @@ export function formatModelPriceShort(model: ChatModelOption): string {
 
 export function getDefaultChatModel(): ChatModelOption {
   return getChatModel(DEFAULT_CHAT_MODEL_ID);
+}
+
+/** 카탈로그·RAG 내부 모델 등 — OpenAI chat completions 토큰 파라미터 */
+export function resolveOpenAiTokenLimitKey(modelId: string): OpenAiTokenLimitKey {
+  const catalog = CHAT_MODELS.find((m) => m.id === modelId);
+  if (catalog?.openAiTokenLimitKey) return catalog.openAiTokenLimitKey;
+
+  if (/^(gpt-5|o[134](-|$))/i.test(modelId)) {
+    return 'max_completion_tokens';
+  }
+  return 'max_tokens';
 }
