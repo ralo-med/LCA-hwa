@@ -1464,7 +1464,8 @@ const CHATBOT_PERSONA = `당신은 화순전남대학교병원 폐암 환자 안
 - 대화체, 완결된 문장, 방어적 마무리·면책 반복 금지.
 - 환자에게 가이드라인 원문·PDF·캡처 제출을 요청하지 마세요.
 - **간결히** 답하세요. 목록 4~6개, 항목당 1~2문장. 되묻기·마무리 질문 금지.
-- 목록은 \`1. 제목: 설명\` 형식으로 한 줄에 씁니다. 마크다운(**, #, _)은 쓰지 마세요. 번호만 단독 줄로 두지 마세요.`;
+- 목록은 \`1. 짧은 제목: 설명\` 형식으로 한 줄에 씁니다. 마크다운(**, #, _)은 쓰지 마세요. 번호만 단독 줄로 두지 마세요.
+- 항목마다 "제목:", "(원문 근거: …)", "원문 내용은 아래처럼" 같은 **메타·중복 라벨 금지**. 환자에게 읽히는 한국어 설명만 쓰세요. (원문은 UI에 따로 표시됩니다.)`;
 
 export interface ChatPlan {
   messages: OpenAIChatMessage[];
@@ -1559,8 +1560,19 @@ function cleanTrailingDefensive(para: string): string {
   return fixDanglingEnding(result);
 }
 
+export function stripRedundantAnswerLabels(text: string): string {
+  let result = text;
+  result = result.replace(/\s*[（(]원문\s*근거\s*:[^)）]*[)）]/gi, "");
+  result = result.replace(/^(\d+\.\s*)제목\s*:\s*/gim, "$1");
+  result = result.replace(
+    /(?:\.\s*)?원문\s*(?:내용|근거)?(?:은|이)?\s*아래(?:처럼|와?\s*같(?:이|게)?)?\s*정리(?:돼|되)요\.?\s*/gi,
+    (match) => (match.startsWith(".") ? ".\n\n" : ""),
+  );
+  return result.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 export function stripDefensiveClosing(text: string): string {
-  const paragraphs = text.trim().split(/\n{2,}/);
+  const paragraphs = stripRedundantAnswerLabels(text).trim().split(/\n{2,}/);
   const cleaned = paragraphs.map((para, idx) => {
     if (idx !== paragraphs.length - 1) return para.trim();
     return cleanTrailingDefensive(para.trim());
@@ -1677,7 +1689,7 @@ export function buildRagMessages(
     ? `\n- 사용자는 이전 주제(**${topic}**)가 **가이드라인에 있는지** 묻고 있습니다.
 - **첫 문장**에 "네, 가이드라인에 관련 내용이 있습니다."처럼 **있음/없음을 명확히** 답하세요.
 - "가능성이 높습니다", "흩어져 있을 수 있습니다" 같은 **회피 표현 금지**.
-- 이어서 아래 원문 근거로 구체적으로 설명하세요.`
+- 이어서 아래 내용으로 구체적으로 설명하세요.`
     : "";
 
   const answerGuide = `가이드라인 원문이 제공되었습니다.
@@ -1688,6 +1700,7 @@ export function buildRagMessages(
 - 원문에 없는 내용은 추측하지 마세요. 보충이 필요하면 짧게 구분하세요.
 - 환자에게 원문을 더 보내달라고 하지 마세요. 찾은 원문 범위에서 단계별로 최대한 구체적으로 설명하세요.
 - 원문 직역·### 제목·페이지 번호는 응답에 넣지 마세요. (원문은 UI에 별도 표시됩니다.)
+- "제목:", "(원문 근거: …)", "원문 내용은 아래처럼" 같은 **메타·중복 라벨 금지**. 한국어로만 간단히 설명하세요.
 - 목차 나열 금지.${lineHint}${followUpHint}`;
 
   return [
@@ -1889,7 +1902,7 @@ export function buildSurvivalMessages(
 - "가이드라인에 수치가 없다"만 길게 말하지 마세요. 대시보드 수치를 먼저 설명하세요.
 - 한국 KCCR 참고치는 **별도 참고**로 한 줄만 언급 (K-M과 직접 비교 불가).
 - **면책**: 비슷한 과거 환자 기록 기반 참고치이며, 본인의 예후·치료 계획이 아님 — 1~2문장.
-- 목록 3~5개, 항목당 1~2문장. \`1. 제목: 설명\` 형식. 마크다운(**, #) 금지.
+- 목록 3~5개, 항목당 1~2문장. \`1. 짧은 제목: 설명\` 형식. "제목:", "(원문 근거: …)" 같은 메타 라벨 금지. 마크다운(**, #) 금지.
 
 **현재 환자 정보 (대시보드)**
 ${buildPatientContextBlock(patientContext)}
