@@ -1,9 +1,12 @@
 import { MUTATION_OPTIONS, PDL1_OPTIONS } from '@/constants';
+import type { SurvivalEstimate } from '@/lib/survival-cbioportal';
 import { histologyLabel, usesNsclcBiomarkerPanel } from '@/lib/utils';
 import type { PatientProfile } from '@/types';
 
 export interface GuidePatientContext {
   profile: PatientProfile;
+  /** 메인 대시보드 K-M 생존 추정 (챗봇 생존율 질문용) */
+  survival?: SurvivalEstimate | null;
 }
 
 const EMPTY = '-';

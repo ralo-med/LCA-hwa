@@ -89,10 +89,11 @@ export function useGuideChat(
         plan.fromGuidelineRag && plan.citations.length > 0
           ? filterRelevantCitations(plan.citations, plan.retrievalQuery)
           : resolved.sources;
-      const answerType =
-        plan.fromGuidelineRag &&
-        plan.citations.length > 0 &&
-        !answerDeniesGuidelineRelevance(text)
+      const answerType = plan.fromSurvivalDashboard
+        ? 'survival'
+        : plan.fromGuidelineRag &&
+            plan.citations.length > 0 &&
+            !answerDeniesGuidelineRelevance(text)
           ? 'guideline'
           : resolved.answerType;
 

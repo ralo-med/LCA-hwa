@@ -9,7 +9,7 @@ export interface GuideChatSource {
   excerpt: string;
 }
 
-export type GuideAnswerType = 'chat' | 'general' | 'guideline';
+export type GuideAnswerType = 'chat' | 'general' | 'guideline' | 'survival';
 
 export interface GuideChatMessage {
   role: ChatRole;

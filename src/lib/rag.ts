@@ -10,9 +10,18 @@ import {
   buildPatientContextBlock,
   type GuidePatientContext,
 } from "@/lib/guide-patient-context";
-import { histologyLabel } from "@/lib/utils";
+import {
+  buildSurvivalDashboardBlock,
+  isSurvivalDashboardQuery,
+} from "@/lib/survival-chat-context";
+import {
+  estimateSurvival,
+  type SurvivalEstimate,
+} from "@/lib/survival-cbioportal";
 
 export type { GuidePatientContext } from "@/lib/guide-patient-context";
+export { isSurvivalDashboardQuery } from "@/lib/survival-chat-context";
+import { histologyLabel } from "@/lib/utils";
 import type {
   GuideAnswerType,
   GuideChatMessage,
@@ -81,7 +90,7 @@ const GUIDELINE_FOLLOWUP_QUERY =
 const USER_SOURCE_REQUEST =
   /원문.*(주시|보내|첨부|공유|함께)|PDF.*(보내|주시)|주시면.*정리|알려주시면.*정리/i;
 const DAILY_LIVING_QUERY =
-  /일상|생활|주의|일상생활|감염|위생|휴식|체력|정서|품질|daily\s*life|quality of life|lifestyle/i;
+  /일상|생활|주의|조심|해야\s*할|일상생활|감염|위생|휴식|체력|정서|품질|daily\s*life|quality of life|lifestyle/i;
 const SUN_UV_QUERY =
   /자외선|선크림|햇빛|햇볕|sunscreen|\bUV\b|ultraviolet|sun\s*exposure/i;
 
@@ -572,11 +581,30 @@ export function buildRetrievalQuery(
     return `${topic} ${query}`.trim();
   }
 
+  if (
+    query.length < 45 &&
+    (DAILY_LIVING_QUERY.test(query) || SUPPORTIVE_CARE_QUERY.test(query))
+  ) {
+    return `${query} supportive care daily living infection hygiene`.trim();
+  }
+
   if (query.length < 35 && topic) {
+    if (isSurvivalDashboardQuery(topic) && !isSurvivalDashboardQuery(query)) {
+      return query;
+    }
     return `${topic} ${query}`.trim();
   }
 
   return query;
+}
+
+function queryWantsGuidelineFallback(query: string): boolean {
+  return (
+    hasTopicAnchor(query) ||
+    DAILY_LIVING_QUERY.test(query) ||
+    SUPPORTIVE_CARE_QUERY.test(query) ||
+    MEDICAL_SIGNAL.test(query)
+  );
 }
 
 function getRecentlyCitedPages(priorHistory: GuideChatMessage[]): Set<string> {
@@ -1041,7 +1069,7 @@ function buildTopicFallbackCitations(
   limit: number = 4,
 ): GuideChatSource[] {
   let strengthFn: (text: string) => number = () => 0;
-  let minStrength = 2;
+  const minStrength = 2;
   let rejectExcerpt: (excerpt: string) => boolean = () => false;
 
   if (SUPPORTIVE_CARE_QUERY.test(query)) {
@@ -1270,6 +1298,9 @@ export function shouldSearchGuidelines(
   if (isChitchatQuery(query)) return false;
   if (mode === "search") return true;
 
+  // auto: 잡담·관련 없는 주제만 제외하고 항상 가이드라인 검색
+  if (mode === "auto") return true;
+
   if (GUIDELINE_FOLLOWUP_QUERY.test(query)) return true;
   if (/다\s*검색|검색해\s*봐|찾아\s*봐|찾아\s*줘/i.test(query)) return true;
   if (MEDICAL_SIGNAL.test(query)) return true;
@@ -1363,9 +1394,7 @@ export async function retrieveChunks(
     : pool
         .map((chunk) => {
           const hint = topicSearchHint(retrievalQuery);
-          const kwQuery = hint
-            ? `${retrievalQuery} ${hint}`
-            : retrievalQuery;
+          const kwQuery = hint ? `${retrievalQuery} ${hint}` : retrievalQuery;
           const similarity = keywordScore(kwQuery, chunk.text) / 10;
           return {
             chunk,
@@ -1398,8 +1427,9 @@ export async function retrieveChunks(
 
   const built = buildCitations(hits, pool, retrievalQuery, ranked.slice(0, 24));
   let citations = filterRelevantCitations(built, retrievalQuery);
-  if (citations.length === 0 && hasTopicAnchor(retrievalQuery)) {
+  if (citations.length === 0 && queryWantsGuidelineFallback(retrievalQuery)) {
     citations = buildTopicFallbackCitations(pool, retrievalQuery);
+    citations = filterRelevantCitations(citations, retrievalQuery);
   }
 
   return {
@@ -1443,6 +1473,8 @@ export interface ChatPlan {
   retrievalQuery: string;
   /** buildRagMessages 경로로 답변 생성 */
   fromGuidelineRag: boolean;
+  /** 메인 대시보드 K-M 생존 추정 경로 */
+  fromSurvivalDashboard: boolean;
 }
 
 function isDefensiveSentence(sentence: string): boolean {
@@ -1450,7 +1482,11 @@ function isDefensiveSentence(sentence: string): boolean {
   if (!s || s.length < 12) return false;
   if (/^\d+\.?$/.test(s)) return false;
   if (/궁금한\s*점이\s*있으면\s*언제든지/i.test(s)) return true;
-  if (/있을\s*가능성|흩어져\s*있|한\s*제목\s*아래|찾지\s*못한\s*것처럼|캡처.*보내/i.test(s)) {
+  if (
+    /있을\s*가능성|흩어져\s*있|한\s*제목\s*아래|찾지\s*못한\s*것처럼|캡처.*보내/i.test(
+      s,
+    )
+  ) {
     return true;
   }
   if (USER_SOURCE_REQUEST.test(s)) return true;
@@ -1831,6 +1867,40 @@ ${covered}`,
   ];
 }
 
+export function buildSurvivalMessages(
+  question: string,
+  patientContext: GuidePatientContext,
+  survival: SurvivalEstimate | null,
+  priorHistory: GuideChatMessage[] = [],
+): OpenAIChatMessage[] {
+  const survivalBlock = buildSurvivalDashboardBlock(survival);
+
+  return [
+    {
+      role: "system",
+      content: `${CHATBOT_PERSONA}
+
+사용자가 **본인(대시보드 프로필)의 생존율·생존기간**을 묻고 있습니다.
+
+**답변 규칙**
+- **첫 문장**에 아래 대시보드 K-M 수치(5년·3년·1년·median OS)를 **숫자로** 말하세요. 데이터가 없으면 그 이유를 짧게 설명하세요.
+- 아래 수치는 메인 **생존 대시보드**와 동일한 cBioPortal 코호트 추정입니다. 가이드라인 PDF가 아닙니다.
+- NCCN 환자 안내 PDF에는 개인별 5년 생존율 숫자가 없습니다. **가이드라인 원문을 근거로 생존율을 찾지 마세요.**
+- "가이드라인에 수치가 없다"만 길게 말하지 마세요. 대시보드 수치를 먼저 설명하세요.
+- 한국 KCCR 참고치는 **별도 참고**로 한 줄만 언급 (K-M과 직접 비교 불가).
+- **면책**: 비슷한 과거 환자 기록 기반 참고치이며, 본인의 예후·치료 계획이 아님 — 1~2문장.
+- 목록 3~5개, 항목당 1~2문장. \`1. 제목: 설명\` 형식. 마크다운(**, #) 금지.
+
+**현재 환자 정보 (대시보드)**
+${buildPatientContextBlock(patientContext)}
+
+${survivalBlock}`,
+    },
+    ...toOpenAIHistory(priorHistory),
+    { role: "user", content: question },
+  ];
+}
+
 function hasTopicAnchor(query: string): boolean {
   return (
     NUTRITION_QUERY.test(query) ||
@@ -1853,6 +1923,26 @@ export async function planChatResponse(
   priorHistory: GuideChatMessage[] = [],
   guideMode: GuideSearchMode = "auto",
 ): Promise<ChatPlan> {
+  if (isSurvivalDashboardQuery(question)) {
+    let survival = patientContext.survival ?? null;
+    if (patientContext.survival === undefined) {
+      survival = await estimateSurvival(patientContext.profile);
+    }
+    return {
+      messages: buildSurvivalMessages(
+        question,
+        patientContext,
+        survival,
+        priorHistory,
+      ),
+      citations: [],
+      searchedGuidelines: false,
+      retrievalQuery: question,
+      fromGuidelineRag: false,
+      fromSurvivalDashboard: true,
+    };
+  }
+
   const searchedGuidelines = shouldSearchGuidelines(
     question,
     guideMode,
@@ -1866,6 +1956,7 @@ export async function planChatResponse(
       searchedGuidelines: false,
       retrievalQuery: question,
       fromGuidelineRag: false,
+      fromSurvivalDashboard: false,
     };
   }
 
@@ -1873,9 +1964,12 @@ export async function planChatResponse(
   const isGuidelineFollowUp = GUIDELINE_FOLLOWUP_QUERY.test(question);
   const conversationTopic = extractConversationTopic(priorHistory);
   const searchQuestion =
-    isGuidelineFollowUp && conversationTopic ? conversationTopic : question;
+    isGuidelineFollowUp && conversationTopic
+      ? `${conversationTopic} ${question}`.trim()
+      : retrievalQuery;
 
-  const wantsExtraPages = hasTopicAnchor(retrievalQuery);
+  const wantsExtraPages =
+    hasTopicAnchor(retrievalQuery) || hasTopicAnchor(question);
 
   const retrieved = await retrieveChunks(
     searchQuestion,
@@ -1883,22 +1977,32 @@ export async function planChatResponse(
     wantsExtraPages ? 8 : 5,
     priorHistory,
   );
-  let citations = filterRelevantCitations(
-    retrieved.citations,
-    retrievalQuery,
-  );
+  let citations = filterRelevantCitations(retrieved.citations, retrievalQuery);
+  if (citations.length === 0 && question !== retrievalQuery) {
+    citations = filterRelevantCitations(retrieved.citations, question);
+  }
 
-  if (citations.length === 0 && hasTopicAnchor(retrievalQuery)) {
+  if (
+    citations.length === 0 &&
+    (queryWantsGuidelineFallback(retrievalQuery) ||
+      queryWantsGuidelineFallback(question))
+  ) {
     const store = await loadGuideChunks();
     const pool = filterChunkPool(
       store.chunks,
       resolveTargetDocs(retrievalQuery, patientContext.profile.histology),
     );
     citations = buildTopicFallbackCitations(pool, retrievalQuery);
+    if (citations.length === 0 && question !== retrievalQuery) {
+      citations = buildTopicFallbackCitations(pool, question);
+    }
+    citations = filterRelevantCitations(citations, retrievalQuery);
+    if (citations.length === 0 && question !== retrievalQuery) {
+      citations = filterRelevantCitations(citations, question);
+    }
   }
 
-  const canUseGuidelineRag =
-    citations.length > 0 && hasTopicAnchor(retrievalQuery);
+  const canUseGuidelineRag = citations.length > 0;
 
   if (canUseGuidelineRag) {
     return {
@@ -1912,6 +2016,7 @@ export async function planChatResponse(
       searchedGuidelines: true,
       retrievalQuery,
       fromGuidelineRag: true,
+      fromSurvivalDashboard: false,
     };
   }
 
@@ -1927,6 +2032,7 @@ export async function planChatResponse(
       searchedGuidelines: true,
       retrievalQuery,
       fromGuidelineRag: false,
+      fromSurvivalDashboard: false,
     };
   }
 
@@ -1941,5 +2047,6 @@ export async function planChatResponse(
     searchedGuidelines: true,
     retrievalQuery,
     fromGuidelineRag: false,
+    fromSurvivalDashboard: false,
   };
 }

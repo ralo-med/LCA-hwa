@@ -23,6 +23,7 @@ import { useGuideChat } from "@/hooks/useGuideChat";
 import { useLlmSettings } from "@/hooks/useLlmSettings";
 import { CHAT_FONT_SIZE_OPTIONS } from "@/lib/chat-font-size";
 import { usePatientProfile } from "@/hooks/usePatientProfile";
+import { useSurvival } from "@/hooks/useSurvival";
 import { cn } from "@/lib/cn";
 import { formatMutationLabels, formatPdl1Label } from "@/lib/guide-patient-context";
 import { stripInlineGuidelineSection } from "@/lib/rag";
@@ -56,7 +57,14 @@ const GuideChatPage = () => {
   const llm = useLlmSettings();
   const chatFont = useChatFontSize();
   const { profile } = usePatientProfile();
-  const chat = useGuideChat({ profile }, llm.selectedModelId);
+  const survival = useSurvival(profile);
+  const chat = useGuideChat(
+    {
+      profile,
+      survival: survival.isLoading ? undefined : survival.data,
+    },
+    llm.selectedModelId,
+  );
   const endRef = useRef<HTMLDivElement | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -240,12 +248,16 @@ const GuideChatPage = () => {
                             "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
                             msg.answerType === "guideline"
                               ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
-                              : "bg-muted text-muted-foreground",
+                              : msg.answerType === "survival"
+                                ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
+                                : "bg-muted text-muted-foreground",
                           )}
                         >
                           {msg.answerType === "guideline"
                             ? "가이드라인 기반"
-                            : "일반 안내"}
+                            : msg.answerType === "survival"
+                              ? "대시보드 생존 추정"
+                              : "일반 안내"}
                         </span>
                       )}
 
