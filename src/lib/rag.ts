@@ -27,23 +27,71 @@ import type {
   Histology,
 } from "@/types";
 
-export type GuideDocId = "metastatic" | "earlystage" | "sclc";
+export type GuideDocId =
+  | "metastatic"
+  | "earlystage"
+  | "sclc"
+  | "patient_qa"
+  | "kalc_guideline"
+  | "factsheet";
+
+export type GuideDocLang = "ko" | "en";
+export type GuideDocAudience = "patient" | "clinician";
 
 export const GUIDE_DOC_META: Record<
   GuideDocId,
-  { fileName: string; title: string }
+  {
+    fileName: string;
+    title: string;
+    lang: GuideDocLang;
+    audience: GuideDocAudience;
+    /** RAG 검색 대상이 아니라 열람용으로만 제공 */
+    viewerOnly?: boolean;
+    source: string;
+  }
 > = {
   metastatic: {
     fileName: "lung-metastatic-patient.pdf",
     title: "전이성 폐암 환자 안내",
+    lang: "en",
+    audience: "patient",
+    source: "NCCN Guidelines for Patients",
   },
   earlystage: {
     fileName: "lung-early-stage-patient.pdf",
     title: "조기 폐암 환자 안내",
+    lang: "en",
+    audience: "patient",
+    source: "NCCN Guidelines for Patients",
   },
   sclc: {
     fileName: "SCLC-patient-guideline.pdf",
     title: "소세포폐암 환자 가이드라인",
+    lang: "en",
+    audience: "patient",
+    source: "NCCN Guidelines for Patients",
+  },
+  patient_qa: {
+    fileName: "lungca-patient-qa.pdf",
+    title: "폐암 무엇이든 물어보세요 (환자 Q&A)",
+    lang: "ko",
+    audience: "patient",
+    source: "대한폐암학회",
+  },
+  kalc_guideline: {
+    fileName: "kalc-lung-guideline-2023.pdf",
+    title: "폐암 진료지침 (3판)",
+    lang: "ko",
+    audience: "clinician",
+    source: "대한폐암학회 · 2023",
+  },
+  factsheet: {
+    fileName: "lung-factsheet-cnuhh.pdf",
+    title: "폐암 진단·치료 안내서 (팩트시트)",
+    lang: "ko",
+    audience: "patient",
+    viewerOnly: true,
+    source: "화순전남대학교병원",
   },
 };
 
@@ -55,14 +103,26 @@ export interface GuideChunk {
   page: number;
   text: string;
   embedding: number[];
+  lang?: GuideDocLang;
+  audience?: GuideDocAudience;
 }
 
 export interface GuideChunkStore {
   version: number;
   model: string | null;
   generatedAt: string;
-  docs: { id: string; title: string; tags: string[] }[];
+  docs: {
+    id: string;
+    title: string;
+    tags: string[];
+    lang?: GuideDocLang;
+    audience?: GuideDocAudience;
+  }[];
   chunks: GuideChunk[];
+}
+
+function chunkLang(chunk: GuideChunk): GuideDocLang {
+  return chunk.lang ?? GUIDE_DOC_META[chunk.docId]?.lang ?? "en";
 }
 
 const SCLC_QUERY = /소세포|SCLC|small\s*cell/i;
@@ -79,7 +139,7 @@ const OVERVIEW_QUERY =
 const BIOMARKER_QUERY =
   /PD[- ]?L1|EGFR|ALK|ROS1|BRAF|KRAS|면역관문|면역치료|immunotherapy|표적치료|바이오마커|biomarker/i;
 const TREATMENT_METHOD_QUERY =
-  /치료\s*(방법|법|옵션|과정)|수술|방사선|항암|화학|어떻게\s*치료/i;
+  /치료\s*(방법|법|옵션|과정|은|는|에\s*대해|에\s*대하여|에\s*관해)|어떻게\s*치료|어떤\s*치료|무슨\s*치료|치료.*(알려|설명|정리|궁금)|수술|방사선|항암|화학/i;
 const MY_DISEASE_QUERY =
   /내\s*병|나랑?\s*관련|나에게|저에게|내\s*상황|내\s*경우|설명해\s*줘/i;
 const GUIDELINE_FOLLOWUP_QUERY =
@@ -133,17 +193,47 @@ export interface RetrieveResult {
 }
 
 let storeCache: GuideChunkStore | null = null;
+let clinicianStoreCache: GuideChunkStore | null = null;
+let mergedStoreCache: GuideChunkStore | null = null;
 
-export async function loadGuideChunks(): Promise<GuideChunkStore> {
-  if (storeCache) return storeCache;
-  const res = await fetch("/data/guide-chunks.json");
-  if (!res.ok) {
-    throw new Error(
-      "가이드 데이터를 불러오지 못했습니다. npm run embed-pdfs를 실행해 주세요.",
-    );
+async function loadClinicianStore(): Promise<GuideChunkStore | null> {
+  if (clinicianStoreCache) return clinicianStoreCache;
+  try {
+    const res = await fetch("/data/guide-chunks-clinician.json");
+    if (!res.ok) return null;
+    clinicianStoreCache = (await res.json()) as GuideChunkStore;
+    return clinicianStoreCache;
+  } catch {
+    return null;
   }
-  storeCache = (await res.json()) as GuideChunkStore;
-  return storeCache;
+}
+
+export async function loadGuideChunks(
+  opts: { includeClinician?: boolean } = {},
+): Promise<GuideChunkStore> {
+  if (!storeCache) {
+    const res = await fetch("/data/guide-chunks.json");
+    if (!res.ok) {
+      throw new Error(
+        "가이드 데이터를 불러오지 못했습니다. npm run embed-pdfs를 실행해 주세요.",
+      );
+    }
+    storeCache = (await res.json()) as GuideChunkStore;
+  }
+
+  if (!opts.includeClinician) return storeCache;
+
+  const clinician = await loadClinicianStore();
+  if (!clinician || clinician.chunks.length === 0) return storeCache;
+
+  if (!mergedStoreCache) {
+    mergedStoreCache = {
+      ...storeCache,
+      docs: [...storeCache.docs, ...clinician.docs],
+      chunks: [...storeCache.chunks, ...clinician.chunks],
+    };
+  }
+  return mergedStoreCache;
 }
 
 export function cosineSimilarity(a: number[], b: number[]): number {
@@ -162,6 +252,7 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 export function resolveTargetDocs(
   query: string,
   histology: Histology,
+  opts: { includeClinician?: boolean } = {},
 ): GuideDocId[] {
   const docs: GuideDocId[] = [];
 
@@ -187,10 +278,23 @@ export function resolveTargetDocs(
     else docs.push("earlystage", "metastatic");
   }
 
+  // 대한폐암학회 환자 Q&A(한글)는 전 주제를 폭넓게 다루므로 항상 검색 대상에 포함한다.
+  // 단, 주제로 특정된 문서의 우선순위(primary)를 뺏지 않도록 뒤에 추가한다.
+  docs.push("patient_qa");
+
+  // 의료진용 진료지침은 '정확한 의학 답변' 모드에서만 검색 대상에 추가
+  if (opts.includeClinician) docs.push("kalc_guideline");
+
   return [...new Set(docs)];
 }
 
+// 한글 자료 우선 부스트 — 한글 원문이 한글 질의에 더 정확하고, 영어 번역
+// 검색 경로가 이전 대화 맥락에 오염돼 엉뚱한 문서를 끌어오는 것을 방지한다.
+const KO_LANG_BOOST = 0.1;
+
 function docBoost(targetDocs: GuideDocId[], docId: GuideDocId): number {
+  // 환자 Q&A(한글)는 항상 우대하되, 주제로 특정된 문서를 누르지 않는 중간 수준으로.
+  if (docId === "patient_qa" && targetDocs.includes("patient_qa")) return 0.1;
   if (targetDocs[0] === docId) return 0.15;
   if (targetDocs.includes(docId)) return 0.08;
   return 0;
@@ -625,8 +729,106 @@ function isOffTopicExcerpt(excerpt: string): boolean {
   );
 }
 
+const KO_RELEVANCE_STOPWORDS = new Set([
+  "그리고",
+  "하지만",
+  "그런데",
+  "대해",
+  "대해서",
+  "대하여",
+  "관해",
+  "관하여",
+  "자세히",
+  "무엇",
+  "어떻게",
+  "알려",
+  "알려줘",
+  "알려줘봐",
+  "설명",
+  "정리",
+  "폐암",
+  "환자",
+  "경우",
+  "저에게",
+  "나에게",
+  "있나요",
+  "인가요",
+  "되나요",
+  "대한",
+  "위한",
+  "통해",
+  "무슨",
+  "어떤",
+  "종류",
+]);
+
+function hasHangul(text: string): boolean {
+  return /[가-힣]/.test(text);
+}
+
+/** 질의에서 조사·불용어를 제거한 한글/영숫자 의미 토큰 추출 */
+function koreanContentTerms(query: string): string[] {
+  const rawTerms = query.match(/[가-힣]{2,}|[A-Za-z0-9]{2,}/g) ?? [];
+  return rawTerms
+    .map((t) =>
+      t.replace(
+        /(에서|에게|으로|부터|까지|에도|은|는|이|가|을|를|의|과|와|도|로|에)$/,
+        "",
+      ),
+    )
+    .filter((t) => t.length >= 2 && !KO_RELEVANCE_STOPWORDS.has(t));
+}
+
+/** 한글 발췌용 관련성 판정 — 영어 키워드 대신 질의-발췌 토큰 겹침으로 평가 */
+function koreanExcerptRelates(excerpt: string, query: string): boolean {
+  const terms = koreanContentTerms(query);
+  // 의미 토큰이 없으면(질의가 매우 짧으면) 임베딩 랭킹을 신뢰해 통과
+  if (terms.length === 0) return true;
+  // "종양표지자" ↔ "종양 표지자"처럼 띄어쓰기가 달라도 매칭되도록 공백 무시 비교
+  const exNoSpace = excerpt.replace(/\s+/g, "");
+  return terms.some((t) => excerpt.includes(t) || exNoSpace.includes(t));
+}
+
+/** 한글 페이지 발췌 추출 — 질의 토큰과 가장 많이 겹치는 문장 구간을 반환 */
+function extractKoreanExcerpt(
+  clean: string,
+  query: string,
+  maxLen: number,
+): string | null {
+  const terms = koreanContentTerms(query);
+  const sentences = clean
+    .split(/(?<=[.!?。])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 20);
+  if (sentences.length === 0) {
+    return clean.length >= 40 ? clean.slice(0, maxLen) : null;
+  }
+  const ranked = sentences
+    .map((s) => {
+      const sNoSpace = s.replace(/\s+/g, "");
+      return {
+        s,
+        score: terms.reduce(
+          (a, t) => a + (s.includes(t) || sNoSpace.includes(t) ? 1 : 0),
+          0,
+        ),
+      };
+    })
+    .sort((a, b) => b.score - a.score || b.s.length - a.s.length);
+  const best = ranked[0]!.s;
+  const idx = clean.indexOf(best);
+  const excerpt = idx >= 0 ? clean.slice(idx, idx + maxLen).trim() : best;
+  return excerpt.length >= 40 ? excerpt : null;
+}
+
 function excerptRelatesToQuery(excerpt: string, query: string): boolean {
   if (isOffTopicExcerpt(excerpt)) return false;
+
+  // 한글 발췌(대한폐암학회 자료 등)는 영어 키워드 필터를 적용하지 않고
+  // 한글 토큰 겹침으로 관련성을 판정한다. (영어 NCCN 발췌는 기존 로직 유지)
+  if (hasHangul(excerpt)) {
+    return koreanExcerptRelates(excerpt, query);
+  }
 
   const exLower = excerpt.toLowerCase();
 
@@ -795,6 +997,12 @@ function extractRelevantExcerpt(
   maxLen: number = 280,
 ): string | null {
   const clean = normalizePageText(pageText);
+
+  // 한글 페이지는 영어 토픽 패턴이 맞지 않으므로 질의 토큰 기반으로 발췌
+  if (hasHangul(clean)) {
+    return extractKoreanExcerpt(clean, query, maxLen);
+  }
+
   const patterns = getTopicPatterns(query);
 
   if (patterns.length > 0) {
@@ -879,6 +1087,16 @@ function selectHitsWithAnchors(
       );
     }
 
+    // 한글 문서는 영어 topic-signal이 없어 앵커에서 누락되므로,
+    // 임베딩 상위 한글 청크를 함께 후보에 넣어 경쟁시킨다.
+    for (const r of ranked) {
+      if (chunkLang(r.chunk) !== "ko") continue;
+      const key = `${r.chunk.docId}:${r.chunk.page}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      anchorHits.push(r);
+    }
+
     if (anchorHits.length > 0) {
       anchorHits.sort((a, b) => b.score - a.score);
       return anchorHits.slice(0, topPages + 1);
@@ -910,6 +1128,34 @@ function buildSearchQuery(
     .join("\n");
   const topicHint = topicSearchHint(query);
   return [englishQuery, hints, topicHint].filter(Boolean).join("\n");
+}
+
+function koTopicHint(query: string): string {
+  const hints: string[] = [];
+  if (NUTRITION_QUERY.test(query)) hints.push("영양 식이 체중 관리 식사");
+  if (SUPPORTIVE_CARE_QUERY.test(query))
+    hints.push("부작용 증상 관리 완화 지지 치료 오심 구토 피로 감염");
+  if (BIOMARKER_QUERY.test(query))
+    hints.push("표적치료 면역치료 PD-L1 EGFR ALK 바이오마커");
+  if (TREATMENT_METHOD_QUERY.test(query))
+    hints.push("수술 방사선 항암 화학요법 치료 방법");
+  if (DAILY_LIVING_QUERY.test(query))
+    hints.push("일상생활 주의사항 휴식 위생 정서 삶의 질");
+  return hints.join(" ");
+}
+
+/** 한글 문서(대한폐암학회 자료)용 검색 질의 — 영어 번역 없이 한글 그대로 매칭 */
+function buildKoreanSearchQuery(
+  query: string,
+  patientContext: GuidePatientContext,
+): string {
+  const { profile } = patientContext;
+  const parts = [query, histologyLabel(profile.histology)];
+  const biomarker = biomarkerSearchHint(profile);
+  if (biomarker) parts.push(biomarker);
+  const hint = koTopicHint(query);
+  if (hint) parts.push(hint);
+  return parts.filter(Boolean).join("\n");
 }
 
 async function translateQueryForRetrieval(
@@ -1171,6 +1417,8 @@ export function buildCitations(
   }
 
   const excerptPriority = (excerpt: string): number => {
+    // 질의와 관련된 한글 발췌는 최우선(영어 NCCN보다 앞)으로 배치
+    if (hasHangul(excerpt) && koreanExcerptRelates(excerpt, query)) return -1;
     if (BIOMARKER_QUERY.test(query) && /PD-L1/i.test(excerpt)) return 0;
     if (
       NUTRITION_QUERY.test(query) &&
@@ -1374,38 +1622,58 @@ export async function retrieveChunks(
   patientContext: GuidePatientContext,
   topPages: number = 5,
   priorHistory: GuideChatMessage[] = [],
+  opts: { includeClinician?: boolean } = {},
 ): Promise<RetrieveResult> {
   const { profile } = patientContext;
-  const store = await loadGuideChunks();
+  const store = await loadGuideChunks({
+    includeClinician: opts.includeClinician,
+  });
   const retrievalQuery = buildRetrievalQuery(query, priorHistory);
-  const targetDocs = resolveTargetDocs(retrievalQuery, profile.histology);
+  const targetDocs = resolveTargetDocs(retrievalQuery, profile.histology, opts);
   const pool = filterChunkPool(store.chunks, targetDocs);
   const recentPages = getRecentlyCitedPages(priorHistory);
 
   const canVectorSearch = hasEmbeddings(store) && isEmbeddingAvailable();
   const ranked = canVectorSearch
     ? await (async () => {
-        const englishQuery = await translateQueryForRetrieval(
-          retrievalQuery,
-          patientContext,
-          targetDocs,
-          priorHistory,
-        );
-        const searchQuery = buildSearchQuery(
-          englishQuery,
-          targetDocs,
-          retrievalQuery,
-        );
-        const queryEmbedding = await embedText(searchQuery);
+        const poolLangs = new Set(pool.map(chunkLang));
+
+        // 한글 문서는 한글 질의로, 영어 문서는 영어 번역 질의로 각각 임베딩해
+        // 언어별로 최적 매칭한다(교차언어 임베딩 품질 저하 방지).
+        let koEmbedding: number[] | null = null;
+        let enEmbedding: number[] | null = null;
+
+        if (poolLangs.has("ko")) {
+          koEmbedding = await embedText(
+            buildKoreanSearchQuery(retrievalQuery, patientContext),
+          );
+        }
+        if (poolLangs.has("en")) {
+          const englishQuery = await translateQueryForRetrieval(
+            retrievalQuery,
+            patientContext,
+            targetDocs,
+            priorHistory,
+          );
+          enEmbedding = await embedText(
+            buildSearchQuery(englishQuery, targetDocs, retrievalQuery),
+          );
+        }
+
         return pool
           .map((chunk) => {
+            const isKo = chunkLang(chunk) === "ko";
+            const qEmb = isKo ? koEmbedding : enEmbedding;
+            const base = qEmb ? cosineSimilarity(qEmb, chunk.embedding) : 0;
             const similarity =
-              cosineSimilarity(queryEmbedding, chunk.embedding) +
-              retrievalScoreAdjust(chunk.text, chunk.page, retrievalQuery);
+              base + retrievalScoreAdjust(chunk.text, chunk.page, retrievalQuery);
+            // 한글 질의는 한글 원문 자료가 더 정확하고, 영어 경로는 번역 드리프트로
+            // 엉뚱한 문서를 끌어올 수 있어 한글 문서를 우선한다.
+            const langBoost = isKo ? KO_LANG_BOOST : 0;
             return {
               chunk,
               similarity,
-              score: similarity + docBoost(targetDocs, chunk.docId),
+              score: similarity + docBoost(targetDocs, chunk.docId) + langBoost,
             };
           })
           .sort((a, b) => b.score - a.score);
@@ -1415,10 +1683,11 @@ export async function retrieveChunks(
           const hint = topicSearchHint(retrievalQuery);
           const kwQuery = hint ? `${retrievalQuery} ${hint}` : retrievalQuery;
           const similarity = keywordScore(kwQuery, chunk.text) / 10;
+          const langBoost = chunkLang(chunk) === "ko" ? KO_LANG_BOOST : 0;
           return {
             chunk,
             similarity,
-            score: similarity + docBoost(targetDocs, chunk.docId),
+            score: similarity + docBoost(targetDocs, chunk.docId) + langBoost,
           };
         })
         .sort((a, b) => b.score - a.score);
@@ -2065,11 +2334,15 @@ export async function planChatResponse(
   const wantsExtraPages =
     hasTopicAnchor(retrievalQuery) || hasTopicAnchor(question);
 
+  // '정확한 의학 답변'(auto/search) 모드에서만 의료진용 진료지침을 검색 대상에 포함
+  const includeClinician = guideMode === "auto" || guideMode === "search";
+
   const retrieved = await retrieveChunks(
     searchQuestion,
     patientContext,
     wantsExtraPages ? 8 : 5,
     priorHistory,
+    { includeClinician },
   );
   let citations = filterRelevantCitations(retrieved.citations, retrievalQuery);
   if (citations.length === 0 && question !== retrievalQuery) {
@@ -2081,10 +2354,12 @@ export async function planChatResponse(
     (queryWantsGuidelineFallback(retrievalQuery) ||
       queryWantsGuidelineFallback(question))
   ) {
-    const store = await loadGuideChunks();
+    const store = await loadGuideChunks({ includeClinician });
     const pool = filterChunkPool(
       store.chunks,
-      resolveTargetDocs(retrievalQuery, patientContext.profile.histology),
+      resolveTargetDocs(retrievalQuery, patientContext.profile.histology, {
+        includeClinician,
+      }),
     );
     citations = buildTopicFallbackCitations(pool, retrievalQuery);
     if (citations.length === 0 && question !== retrievalQuery) {

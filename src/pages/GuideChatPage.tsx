@@ -442,9 +442,9 @@ const GuideChatPage = () => {
               </Button>
             </div>
 
-            <details className="group rounded-xl border border-primary/20 bg-primary/5">
+            <details className="group rounded-xl border border-border bg-muted/30">
               <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 text-sm marker:content-none [&::-webkit-details-marker]:hidden">
-                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <Phone className="h-3.5 w-3.5" />
                 </span>
                 <span className="font-medium text-foreground">
@@ -452,14 +452,14 @@ const GuideChatPage = () => {
                 </span>
                 <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
               </summary>
-              <div className="grid gap-1.5 border-t border-primary/15 px-4 py-3 sm:grid-cols-2">
+              <div className="grid gap-1.5 border-t border-border px-4 py-3 sm:grid-cols-2">
                 {SUPPORT_HOTLINES.map((h) => (
                   <a
                     key={h.tel}
                     href={`tel:${h.tel.replace(/-/g, "")}`}
-                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-primary/10"
+                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   >
-                    <Phone className="h-4 w-4 shrink-0 text-primary" />
+                    <Phone className="h-4 w-4 shrink-0" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium text-foreground">
                         {h.tel}

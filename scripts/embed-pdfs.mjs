@@ -24,24 +24,52 @@ const CHUNK_SIZE = 700;
 const CHUNK_OVERLAP = 120;
 const BATCH_SIZE = 50;
 
+// lang: 문서 언어. 검색 시 한글 문서는 한글 질의로, 영어 문서는 영어 번역 질의로 매칭한다.
+// audience: 'patient'=환자용(챗봇 기본), 'clinician'=의료진용(정확한 의학 답변 모드)
 const DOCS = [
   {
     id: 'metastatic',
     file: 'lung-metastatic-patient.pdf',
     title: '전이성 폐암 환자 안내',
     tags: ['metastatic', 'nsclc', 'general'],
+    lang: 'en',
+    audience: 'patient',
   },
   {
     id: 'earlystage',
     file: 'lung-early-stage-patient.pdf',
     title: '조기 폐암 환자 안내',
     tags: ['earlystage', 'nsclc'],
+    lang: 'en',
+    audience: 'patient',
   },
   {
     id: 'sclc',
     file: 'SCLC-patient-guideline.pdf',
     title: '소세포폐암 환자 가이드라인',
     tags: ['sclc', 'smallcell'],
+    lang: 'en',
+    audience: 'patient',
+  },
+  {
+    id: 'patient_qa',
+    file: 'lungca-patient-qa.pdf',
+    title: '대한폐암학회 환자 Q&A (폐암 무엇이든 물어보세요)',
+    tags: ['patient', 'qa', 'nsclc', 'sclc', 'general'],
+    lang: 'ko',
+    audience: 'patient',
+  },
+  {
+    id: 'kalc_guideline',
+    file: 'kalc-lung-guideline-2023.pdf',
+    title: '대한폐암학회 폐암 진료지침 (3판, 2023)',
+    tags: ['clinician', 'nsclc', 'sclc'],
+    lang: 'ko',
+    audience: 'clinician',
+    // 의료진용 원문은 방대해 청크를 크게 잡고, 참고문헌 위주 페이지는 제외한다.
+    chunkSize: 1300,
+    chunkOverlap: 150,
+    dropReferences: true,
   },
 ];
 
@@ -54,27 +82,45 @@ function normalizeText(text) {
     .trim();
 }
 
+// 참고문헌 위주 텍스트 판별 (저자 et al, 저널명, doi, 연도;권:쪽 패턴 비율)
+function looksLikeReferences(text) {
+  const refSignal =
+    /\bet al\.?|\bdoi:|https?:\/\/|\d{4};\d+[:(]|N Engl J Med|J Clin Oncol|J Thorac|Lancet|Ann Oncol|Cancer\s+\d{4}|Chest\s+\d{4}/gi;
+  const matches = text.match(refSignal);
+  if (!matches) return false;
+  // 대략 200자당 참고문헌 신호 1개 이상이면 참고문헌 페이지로 간주
+  return matches.length >= Math.max(3, Math.floor(text.length / 200));
+}
+
 function chunkText(text, docMeta, page) {
   const chunks = [];
   if (!text.trim()) return chunks;
 
+  const size = docMeta.chunkSize ?? CHUNK_SIZE;
+  const overlap = docMeta.chunkOverlap ?? CHUNK_OVERLAP;
+  const isKo = docMeta.lang === 'ko';
+
   let start = 0;
   while (start < text.length) {
-    const end = Math.min(start + CHUNK_SIZE, text.length);
+    const end = Math.min(start + size, text.length);
     const slice = text.slice(start, end).trim();
-    if (slice.length >= 80) {
-      const prefix = `[${docMeta.title} | p.${page} | lung cancer patient treatment guideline]`;
+    if (slice.length >= 80 && !(docMeta.dropReferences && looksLikeReferences(slice))) {
+      const prefix = isKo
+        ? `[${docMeta.title} | p.${page} | 폐암 진료 안내]`
+        : `[${docMeta.title} | p.${page} | lung cancer patient treatment guideline]`;
       chunks.push({
         id: `${docMeta.id}-p${page}-c${chunks.length}`,
         docId: docMeta.id,
         docTitle: docMeta.title,
         tags: docMeta.tags,
+        lang: docMeta.lang ?? 'en',
+        audience: docMeta.audience ?? 'patient',
         page,
         text: `${prefix}\n${slice}`,
       });
     }
     if (end >= text.length) break;
-    start = end - CHUNK_OVERLAP;
+    start = end - overlap;
   }
   return chunks;
 }
@@ -139,13 +185,21 @@ async function main() {
     }
   }
 
-  const output = {
-    version: 1,
-    model: extractOnly ? null : EMBEDDING_MODEL,
-    generatedAt: new Date().toISOString(),
-    docs: DOCS.map(({ id, title, tags }) => ({ id, title, tags })),
-    chunks: allChunks,
-  };
+  const model = extractOnly ? null : EMBEDDING_MODEL;
+  const generatedAt = new Date().toISOString();
+  const docMeta = (filterFn) =>
+    DOCS.filter(filterFn).map(({ id, title, tags, lang, audience }) => ({
+      id,
+      title,
+      tags,
+      lang: lang ?? 'en',
+      audience: audience ?? 'patient',
+    }));
+
+  // 환자용(기본, 항상 로딩)과 의료진용(지연 로딩)으로 분리해 초기 로딩을 가볍게 유지
+  const isClinician = (c) => c.audience === 'clinician';
+  const patientChunks = allChunks.filter((c) => !isClinician(c));
+  const clinicianChunks = allChunks.filter(isClinician);
 
   const publicPdfDir = path.join(ROOT, 'public', 'pdfs');
   await fs.mkdir(publicPdfDir, { recursive: true });
@@ -156,10 +210,28 @@ async function main() {
     );
   }
 
-  const outPath = path.join(ROOT, 'public', 'data', 'guide-chunks.json');
-  await fs.writeFile(outPath, JSON.stringify(output));
-  const sizeMb = (Buffer.byteLength(JSON.stringify(output)) / 1024 / 1024).toFixed(2);
-  console.log(`Saved ${outPath} (${sizeMb} MB)`);
+  const dataDir = path.join(ROOT, 'public', 'data');
+  await fs.mkdir(dataDir, { recursive: true });
+
+  const write = async (fileName, docs, chunks) => {
+    const payload = { version: 1, model, generatedAt, docs, chunks };
+    const json = JSON.stringify(payload);
+    const outPath = path.join(dataDir, fileName);
+    await fs.writeFile(outPath, json);
+    const sizeMb = (Buffer.byteLength(json) / 1024 / 1024).toFixed(2);
+    console.log(`Saved ${outPath} (${sizeMb} MB, ${chunks.length} chunks)`);
+  };
+
+  await write(
+    'guide-chunks.json',
+    docMeta((d) => (d.audience ?? 'patient') !== 'clinician'),
+    patientChunks,
+  );
+  await write(
+    'guide-chunks-clinician.json',
+    docMeta((d) => d.audience === 'clinician'),
+    clinicianChunks,
+  );
 }
 
 main().catch((err) => {
