@@ -6,12 +6,14 @@ import { CONTACT_EMAIL, DOCTORS_URL } from '@/constants/site';
 
 const ContactPage = () => {
   return (
-    <InfoPageLayout title="문의하기">
+    <InfoPageLayout
+      title="문의하기"
+      subtitle="오류 제보, 답변·인용 이상, UI 문제, 개선 제안을 받습니다."
+    >
       <section className="space-y-3">
         <p>
-          서비스 이용 중 불편 사항, 오류 제보, 개선 제안이 있으시면 아래
-          이메일로 연락해 주세요. 더 나은 환자 안내 경험을 위해 의견을
-          환영합니다.
+          서비스 이용 중 불편 사항이나 버그가 있으면 아래 이메일로
+          알려 주세요.
         </p>
       </section>
 

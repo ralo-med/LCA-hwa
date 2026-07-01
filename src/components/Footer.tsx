@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { CONTACT_EMAIL } from '@/constants/site';
 
 const Footer = () => (
   <footer className="no-print mt-16 border-t pb-20 pt-8 text-center text-xs text-muted-foreground">
@@ -17,20 +16,18 @@ const Footer = () => (
         to="/contact"
         className="transition-colors hover:text-foreground"
       >
-        문의하기
+        문의·제보
       </Link>
-      <a
-        href={`mailto:${CONTACT_EMAIL}`}
+      <Link
+        to="/guides"
         className="transition-colors hover:text-foreground"
       >
-        {CONTACT_EMAIL}
-      </a>
+        가이드라인 PDF
+      </Link>
     </nav>
-    <p className="font-semibold">
-      © 2026 화순전남대학교병원 폐암 정밀의료 플랫폼 | 환자 맞춤형 항암 교육 대시보드
-    </p>
+    <p>© 2026 화순전남대학교병원 폐암 정밀의료 플랫폼</p>
     <p className="mt-1">
-      모든 분석 및 가이드 결과는 AI 정밀의료 보조 정보이며 실제 진료 계획은 전문의의 소견을 우선합니다.
+      AI 보조 정보이며, 실제 진료 계획은 전문의 소견을 따릅니다.
     </p>
   </footer>
 );

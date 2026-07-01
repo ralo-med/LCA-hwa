@@ -133,11 +133,11 @@ const NSCLC_GENERAL =
 const NUTRITION_QUERY =
   /영양|식이|식사|식욕|체중|음식|nutrition|diet|eating|weight/i;
 const SUPPORTIVE_CARE_QUERY =
-  /부작용|항암|지지|완화|증상|supportive|palliative|side effect|피로|오심|구토|설사|감염/i;
+  /부작용|지지|완화|증상|supportive|palliative|side effect|피로|오심|구토|설사|감염/i;
 const OVERVIEW_QUERY =
   /가이드라인|정리|요약|개요|관련|알려\s*줘|줄로|overview|summary/i;
 const BIOMARKER_QUERY =
-  /PD[- ]?L1|EGFR|ALK|ROS1|BRAF|KRAS|면역관문|면역치료|immunotherapy|표적치료|바이오마커|biomarker/i;
+  /PD[- ]?L1|EGFR|ALK|ROS1|BRAF|KRAS|면역관문|면역\s*치료|면역\s*항암|immunotherapy|표적\s*치료|표적\s*항암|바이오마커|biomarker/i;
 const TREATMENT_METHOD_QUERY =
   /치료\s*(방법|법|옵션|과정|은|는|에\s*대해|에\s*대하여|에\s*관해)|어떻게\s*치료|어떤\s*치료|무슨\s*치료|치료.*(알려|설명|정리|궁금)|수술|방사선|항암|화학/i;
 const MY_DISEASE_QUERY =
@@ -157,7 +157,7 @@ const MIN_CITATION_SIMILARITY = 0.5;
 const OFF_TOPIC_EXCERPT =
   /You have NSCLC if you have|Adenocarcinoma \(A-deh|thoracic radiologist|There's a lot to learn|don't know what the future holds|reading pictures \(images\) of the inside of the chest|expert in reading pictures|Testing is needed to plan treatment|first tests used for cancer staging|pathologist will examine/i;
 const MEDICAL_SIGNAL =
-  /폐|암|치료|항암|nsclc|sclc|병기|수술|방사|화학|영양|식이|부작용|PD[- ]?L1|면역|가이드라인|임상|전이|조기|초기|소세포|선암|편평|EGFR|ALK/i;
+  /폐|암|치료|항암|nsclc|sclc|병기|수술|방사|화학|영양|식이|식사|음식|부작용|PD[- ]?L1|면역|가이드라인|임상|전이|조기|초기|소세포|선암|편평|EGFR|ALK|종양|표지자|검사|진단|유전자|조직|재발|예후|생존|완화|통증|증상|각혈|기침|호흡|표적|약제|재활|흡연|금연/i;
 const GENERIC_BOILERPLATE =
   /Treatment by clinical stage.*very important for planning|Everyone with cancer should carefully consider all of the treatment options|Learn more about your primary treatment in the next chapters|Other specialists who may be involved in your care include/i;
 
@@ -290,7 +290,7 @@ export function resolveTargetDocs(
 
 // 한글 자료 우선 부스트 — 한글 원문이 한글 질의에 더 정확하고, 영어 번역
 // 검색 경로가 이전 대화 맥락에 오염돼 엉뚱한 문서를 끌어오는 것을 방지한다.
-const KO_LANG_BOOST = 0.1;
+const KO_LANG_BOOST = 0.25;
 
 function docBoost(targetDocs: GuideDocId[], docId: GuideDocId): number {
   // 환자 Q&A(한글)는 항상 우대하되, 주제로 특정된 문서를 누르지 않는 중간 수준으로.
@@ -332,16 +332,36 @@ function topicSearchHint(query: string): string {
 }
 
 function topicKeywordBoost(query: string, text: string): number {
+  // 영어 NCCN 페이지와 한글 자료(대한폐암학회)가 동등하게 경쟁하도록
+  // 각 토픽에서 영어·한글 키워드 모두에 가산점을 준다.
+  // 소세포 치료 질의는 일반 치료법 분기보다 먼저 평가한다(비소세포 페이지가
+  // 잘못 우선되는 것을 방지).
+  if (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) {
+    let boost = 0;
+    if (/Initial treatment|초기\s*치료|1차\s*치료/i.test(text)) boost += 0.22;
+    if (
+      /chemoradiation|chemoimmunotherapy|platinum|동시항암방사선|백금|에토포시드|시스플라틴/i.test(
+        text,
+      )
+    )
+      boost += 0.18;
+    if (/Limited.?stage|Extensive.?stage|제한\s*병기|확장\s*병기/i.test(text))
+      boost += 0.14;
+    if (/소세포/i.test(text)) boost += 0.12;
+    if (isCoverOrFrontMatter(text)) boost -= 0.35;
+    return boost;
+  }
   if (NUTRITION_QUERY.test(query)) {
     let boost = 0;
     if (
-      /healthful foods|healthy living|Common goals for healthy living/i.test(
+      /healthful foods|healthy living|Common goals for healthy living|영양\s*관리|식이|식단|균형\s*잡힌|단백질/i.test(
         text,
       )
     ) {
       boost += 0.22;
     }
-    if (/managing body weight|body weight/i.test(text)) boost += 0.08;
+    if (/managing body weight|body weight|체중\s*관리|체중\s*유지/i.test(text))
+      boost += 0.08;
     if (
       /registered dietitian/i.test(text) &&
       !/healthful foods|healthy living/i.test(text)
@@ -352,8 +372,13 @@ function topicKeywordBoost(query: string, text: string): number {
   }
   if (SUPPORTIVE_CARE_QUERY.test(query)) {
     let boost = 0;
-    if (/supportive care/i.test(text)) boost += 0.16;
-    if (/nausea|vomiting|antiemetic|fatigue|side effect/i.test(text)) {
+    if (/supportive care|지지\s*요법|완화\s*치료|증상\s*관리/i.test(text))
+      boost += 0.16;
+    if (
+      /nausea|vomiting|antiemetic|fatigue|side effect|메스꺼움|구토|오심|피로|부작용|설사|변비|감염/i.test(
+        text,
+      )
+    ) {
       boost += 0.14;
     }
     if (
@@ -368,28 +393,53 @@ function topicKeywordBoost(query: string, text: string): number {
   }
   if (BIOMARKER_QUERY.test(query)) {
     let boost = 0;
-    if (/PD-L1|abnormal PD-L1/i.test(text)) boost += 0.28;
-    if (/immunotherapy|immune checkpoint/i.test(text)) boost += 0.14;
+    if (
+      /PD-?L1|abnormal PD-L1|EGFR|ALK|ROS1|표적\s*치료|표적\s*항암|바이오마커|생체\s*표지|유전자\s*변이|돌연변이/i.test(
+        text,
+      )
+    ) {
+      boost += 0.28;
+    }
+    if (
+      /immunotherapy|immune checkpoint|면역\s*관문|면역\s*치료|면역\s*항암/i.test(
+        text,
+      )
+    ) {
+      boost += 0.14;
+    }
     return boost;
   }
   if (TREATMENT_METHOD_QUERY.test(query)) {
     let boost = 0;
     if (
-      /Treating lung cancer with surgery|Surgery is a standard treatment/i.test(
+      /Treating lung cancer with surgery|Surgery is a standard treatment|수술적\s*치료|수술\s*치료|폐엽\s*절제/i.test(
         text,
       )
     ) {
       boost += 0.16;
     }
-    if (/lobectomy|pneumonectomy|wedge resection/i.test(text)) boost += 0.1;
-    if (/radiation|chemotherapy|chemoradiation/i.test(text)) boost += 0.06;
+    if (
+      /lobectomy|pneumonectomy|wedge resection|폐엽절제술|쐐기\s*절제|절제술/i.test(
+        text,
+      )
+    )
+      boost += 0.1;
+    if (
+      /radiation|chemotherapy|chemoradiation|방사선\s*치료|항암\s*화학|화학\s*요법|동시항암방사선/i.test(
+        text,
+      )
+    )
+      boost += 0.06;
     return boost;
   }
   if (DAILY_LIVING_QUERY.test(query)) {
     let boost = 0;
-    if (/supportive care|quality of life/i.test(text)) boost += 0.18;
+    if (/supportive care|quality of life|지지\s*요법|삶의\s*질/i.test(text))
+      boost += 0.18;
     if (
-      /fatigue|infection|hygiene|exercise|nutrition|emotional|rest/i.test(text)
+      /fatigue|infection|hygiene|exercise|nutrition|emotional|rest|피로|감염|위생|운동|정서|휴식|일상\s*생활/i.test(
+        text,
+      )
     ) {
       boost += 0.1;
     }
@@ -398,19 +448,12 @@ function topicKeywordBoost(query: string, text: string): number {
   }
   if (SUN_UV_QUERY.test(query)) {
     let boost = 0;
-    if (/sunscreen|sun exposure|ultraviolet/i.test(text)) boost += 0.2;
+    if (/sunscreen|sun exposure|ultraviolet|자외선|햇볕|선크림/i.test(text))
+      boost += 0.2;
     if (/Common goals for healthy living/i.test(text)) boost += 0.12;
     if (/Testing is needed|first tests used for cancer staging/i.test(text)) {
       boost -= 0.25;
     }
-    return boost;
-  }
-  if (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) {
-    let boost = 0;
-    if (/Initial treatment/i.test(text)) boost += 0.22;
-    if (/chemoradiation|chemoimmunotherapy|platinum/i.test(text)) boost += 0.18;
-    if (/Limited.?stage|Extensive.?stage/i.test(text)) boost += 0.14;
-    if (isCoverOrFrontMatter(text)) boost -= 0.35;
     return boost;
   }
   return 0;
@@ -771,10 +814,17 @@ function koreanContentTerms(query: string): string[] {
   const rawTerms = query.match(/[가-힣]{2,}|[A-Za-z0-9]{2,}/g) ?? [];
   return rawTerms
     .map((t) =>
-      t.replace(
-        /(에서|에게|으로|부터|까지|에도|은|는|이|가|을|를|의|과|와|도|로|에)$/,
-        "",
-      ),
+      t
+        // 질문·서술 어미를 먼저 제거해 실제 내용어만 남긴다
+        .replace(
+          /(입니까|입니다|인가요|은가요|ㄴ가요|나요|가요|까요|어요|예요|이에요|해요|하나요|되나요|일까요|을까요|ㄹ까요|한지|인지)$/,
+          "",
+        )
+        // 조사 제거
+        .replace(
+          /(에서|에게|으로|부터|까지|에도|은|는|이|가|을|를|의|과|와|도|로|에)$/,
+          "",
+        ),
     )
     .filter((t) => t.length >= 2 && !KO_RELEVANCE_STOPWORDS.has(t));
 }
@@ -782,11 +832,15 @@ function koreanContentTerms(query: string): string[] {
 /** 한글 발췌용 관련성 판정 — 영어 키워드 대신 질의-발췌 토큰 겹침으로 평가 */
 function koreanExcerptRelates(excerpt: string, query: string): boolean {
   const terms = koreanContentTerms(query);
-  // 의미 토큰이 없으면(질의가 매우 짧으면) 임베딩 랭킹을 신뢰해 통과
+  // 의미 토큰이 없으면(질의가 매우 짧거나 일반적이면) 임베딩 랭킹을 신뢰해 통과
   if (terms.length === 0) return true;
   // "종양표지자" ↔ "종양 표지자"처럼 띄어쓰기가 달라도 매칭되도록 공백 무시 비교
   const exNoSpace = excerpt.replace(/\s+/g, "");
-  return terms.some((t) => excerpt.includes(t) || exNoSpace.includes(t));
+  if (terms.some((t) => excerpt.includes(t) || exNoSpace.includes(t)))
+    return true;
+  // 직접적 토큰 겹침이 없어도, 같은 주제(치료·바이오마커·부작용 등) 키워드가
+  // 발췌에 있으면 관련 있다고 본다. (임베딩이 이미 상위로 올린 한글 근거 신뢰)
+  return topicKeywordBoost(query, excerpt) > 0;
 }
 
 /** 한글 페이지 발췌 추출 — 질의 토큰과 가장 많이 겹치는 문장 구간을 반환 */
@@ -1132,12 +1186,16 @@ function buildSearchQuery(
 
 function koTopicHint(query: string): string {
   const hints: string[] = [];
+  const isSclcTreatment =
+    SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query);
   if (NUTRITION_QUERY.test(query)) hints.push("영양 식이 체중 관리 식사");
   if (SUPPORTIVE_CARE_QUERY.test(query))
     hints.push("부작용 증상 관리 완화 지지 치료 오심 구토 피로 감염");
   if (BIOMARKER_QUERY.test(query))
-    hints.push("표적치료 면역치료 PD-L1 EGFR ALK 바이오마커");
-  if (TREATMENT_METHOD_QUERY.test(query))
+    hints.push("표적치료 면역치료 PD-L1 EGFR ALK 바이오마커 유전자 변이");
+  if (isSclcTreatment)
+    hints.push("소세포폐암 제한병기 확장병기 동시항암방사선 에토포시드 시스플라틴");
+  else if (TREATMENT_METHOD_QUERY.test(query))
     hints.push("수술 방사선 항암 화학요법 치료 방법");
   if (DAILY_LIVING_QUERY.test(query))
     hints.push("일상생활 주의사항 휴식 위생 정서 삶의 질");
@@ -1150,7 +1208,14 @@ function buildKoreanSearchQuery(
   patientContext: GuidePatientContext,
 ): string {
   const { profile } = patientContext;
-  const parts = [query, histologyLabel(profile.histology)];
+  // 질의가 특정 조직형(소세포/비소세포/선암/편평)을 명시하면 환자 조직형 힌트를
+  // 덧붙이지 않는다. (선암 환자가 "소세포폐암"을 물을 때 오검색되는 것을 방지)
+  const mentionsSubtype = /소세포|비소세포|선암|편평|샘암|small\s*cell|squamous|adeno/i.test(
+    query,
+  );
+  const parts = mentionsSubtype
+    ? [query]
+    : [query, histologyLabel(profile.histology)];
   const biomarker = biomarkerSearchHint(profile);
   if (biomarker) parts.push(biomarker);
   const hint = koTopicHint(query);
@@ -1165,7 +1230,11 @@ async function translateQueryForRetrieval(
   priorHistory: GuideChatMessage[],
 ): Promise<string> {
   const { profile } = patientContext;
-  const hLabel = histologyLabel(profile.histology);
+  // 질의가 다른 조직형을 명시하면 환자 조직형으로 오검색되지 않게 힌트를 뺀다.
+  const mentionsSubtype = /소세포|비소세포|선암|편평|샘암|small\s*cell|squamous|adeno/i.test(
+    query,
+  );
+  const hLabel = mentionsSubtype ? "(question specifies its own subtype)" : histologyLabel(profile.histology);
   const docHint = targetDocs
     .map((id) => GUIDE_DOC_META[id].fileName)
     .join(", ");
@@ -1920,7 +1989,9 @@ export function buildChitchatMessages(
 ): LlmChatMessage[] {
   const offTopic = isOffTopicQuery(question);
   const offTopicHint = offTopic
-    ? `\n- 질문 주제는 폐암 안내와 직접 관련이 없습니다. 2~3문장으로 정중히 답한 뒤, 폐암·치료·부작용·영양·일상 관리 질문을 도와드릴 수 있다고 짧게 안내하세요.`
+    ? `\n- 질문 주제는 폐암 안내와 직접 관련이 없습니다.
+- **절대 지어내지 마세요.** 날씨·뉴스·주가·스포츠 결과 등 실시간·외부 정보는 알 수 없으므로, 추측하거나 사실인 듯 답하지 말고 "그 부분은 제가 확인해 드리기 어려워요"처럼 모른다고 솔직하게 밝히세요.
+- 1~2문장으로 정중히 안내한 뒤, 폐암·치료·부작용·영양·일상 관리에 대한 질문은 도와드릴 수 있다고 짧게 덧붙이세요.`
     : "";
 
   return [
