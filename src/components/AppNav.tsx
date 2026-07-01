@@ -3,8 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/cn';
 
-const DOCTORS_URL =
-  'https://www.cnuhh.com/medical/info/dept.cs?act=view&mode=doctorList&deptCd=IMP';
+import { DOCTORS_URL } from '@/constants/site';
 
 type NavItem =
   | {

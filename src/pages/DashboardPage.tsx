@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Footer from '@/components/Footer';
 import PatientForm from '@/components/PatientForm';
 import PrintHeader from '@/components/PrintHeader';
 import PrintPatientSummary from '@/components/PrintPatientSummary';
@@ -43,8 +42,6 @@ const DashboardPage = () => {
             <PrintPatientSummary profile={profile} />
           </main>
         </div>
-
-        <Footer />
       </div>
     </div>
   );

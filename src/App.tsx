@@ -3,6 +3,9 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import AppNav from '@/components/AppNav';
+import Footer from '@/components/Footer';
+import AboutPage from '@/pages/AboutPage';
+import ContactPage from '@/pages/ContactPage';
 import DashboardPage from '@/pages/DashboardPage';
 import GuideChatPage from '@/pages/GuideChatPage';
 import GuidePdfsPage from '@/pages/GuidePdfsPage';
@@ -37,8 +40,11 @@ const App = () => {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/guide-chat" element={<GuideChatPage />} />
               <Route path="/guides" element={<GuidePdfsPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
             </Routes>
           </main>
+          <Footer />
         </div>
       </BrowserRouter>
       <Toaster position="bottom-center" />
