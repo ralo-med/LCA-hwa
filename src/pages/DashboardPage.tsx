@@ -7,17 +7,21 @@ import SurvivalChart from '@/components/SurvivalChart';
 import SurvivalSummary from '@/components/SurvivalSummary';
 import { usePatientProfile } from '@/hooks/usePatientProfile';
 import { useSurvival } from '@/hooks/useSurvival';
-import { generateIssueNumber, histologyLabel } from '@/lib/utils';
+import {
+  formatProfileSummary,
+  resolveProfileForSurvival,
+} from '@/lib/patient-profile';
+import { generateIssueNumber } from '@/lib/utils';
 
 const DashboardPage = () => {
   const patient = usePatientProfile();
-  const { profile } = patient;
-  const survival = useSurvival(profile);
+  const { profile, configured } = patient;
+  const survivalProfile = resolveProfileForSurvival(profile);
+  const survival = useSurvival(survivalProfile);
 
   const [issueNumber] = useState<string>(() => generateIssueNumber());
   const [issuedAt] = useState<string>(() => new Date().toLocaleString());
 
-  const genderLabel = profile.gender === 'female' ? '여성' : '남성';
   const year5 = survival.data?.year5;
   const median =
     survival.data?.medianOsStatus === 'estimated'
@@ -25,7 +29,7 @@ const DashboardPage = () => {
       : null;
   const shareText = [
     '[화순전남대학교병원 폐암 정밀의료]',
-    `${profile.age}세 ${genderLabel} · ${histologyLabel(profile.histology)} 기준 추정`,
+    `${formatProfileSummary(survivalProfile)} 기준 추정`,
     year5 != null ? `5년 생존 추정치: ${year5.toFixed(1)}%` : null,
     median != null ? `중앙 생존기간: ${median.toFixed(1)}년` : null,
     '※ AI 보조 정보이며 실제 진료는 담당 전문의와 상의하세요.',
@@ -71,11 +75,13 @@ const DashboardPage = () => {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           <PatientForm
             profile={profile}
+            configured={configured}
             setAge={patient.setAge}
             setGender={patient.setGender}
             setHistology={patient.setHistology}
             toggleMutation={patient.toggleMutation}
             resetMutations={patient.resetMutations}
+            setConfigured={patient.setConfigured}
           />
 
           <main className="print-full space-y-6 lg:col-span-8">
@@ -86,7 +92,7 @@ const DashboardPage = () => {
               error={survival.error}
             />
             <SurvivalChart data={survival.data} isLoading={survival.isLoading} />
-            <PrintPatientSummary profile={profile} />
+            <PrintPatientSummary profile={survivalProfile} />
           </main>
         </div>
       </div>

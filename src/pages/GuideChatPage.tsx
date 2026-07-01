@@ -35,8 +35,12 @@ import { useLlmSettings } from "@/hooks/useLlmSettings";
 import { usePatientProfile } from "@/hooks/usePatientProfile";
 import { useSurvival } from "@/hooks/useSurvival";
 import { cn } from "@/lib/cn";
+import {
+  formatProfileSummary,
+  hasPatientProfileInfo,
+  resolveProfileForSurvival,
+} from "@/lib/patient-profile";
 import { stripInlineGuidelineSection } from "@/lib/rag";
-import { histologyLabel } from "@/lib/utils";
 import type { GuideSearchMode } from "@/types";
 
 const SUGGESTIONS = [
@@ -74,8 +78,8 @@ const INPUT_PLACEHOLDER: Record<GuideSearchMode, string> = {
 
 const GuideChatPage = () => {
   const llm = useLlmSettings();
-  const { profile } = usePatientProfile();
-  const survival = useSurvival(profile);
+  const { profile, configured } = usePatientProfile();
+  const survival = useSurvival(resolveProfileForSurvival(profile));
   const chat = useGuideChat(
     {
       profile,
@@ -116,12 +120,13 @@ const GuideChatPage = () => {
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col p-4 md:p-8">
         <div className="mb-4 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-muted-foreground">
           <span className="font-medium text-foreground">
-            {profile.age}세 {profile.gender === "female" ? "여성" : "남성"} ·{" "}
-            {histologyLabel(profile.histology)}
+            {configured && hasPatientProfileInfo(profile)
+              ? formatProfileSummary(profile)
+              : '내 암 정보 없음'}
           </span>
           <span className="text-muted-foreground/40">·</span>
           <Link
-            to="/dashboard"
+            to="/profile"
             className="text-primary underline-offset-4 hover:underline"
           >
             정보 변경

@@ -10,7 +10,7 @@ interface RoleItem {
 
 const ROLE_ITEMS: RoleItem[] = [
   {
-    to: '/guide-chat',
+    to: '/profile',
     icon: HeartHandshake,
     role: '환자·보호자',
     description: '치료·부작용·일상을 쉽게 안내해 드려요.',

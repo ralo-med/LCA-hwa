@@ -1,8 +1,8 @@
 import type { Histology } from "@/types";
 
 /** 소세포 제외 — NSCLC식 드라이버 변이 입력·K-M 필터 대상 */
-export function usesNsclcBiomarkerPanel(h: Histology): boolean {
-  return h !== "smallcell";
+export function usesNsclcBiomarkerPanel(h: Histology | null): boolean {
+  return h != null && h !== "smallcell";
 }
 
 /** @deprecated usesNsclcBiomarkerPanel 사용 */
@@ -10,7 +10,8 @@ export function usesDriverMutationFilter(h: Histology): boolean {
   return usesNsclcBiomarkerPanel(h);
 }
 
-export function histologyLabel(h: Histology): string {
+export function histologyLabel(h: Histology | null): string {
+  if (h == null) return "-";
   switch (h) {
     case "adenocarcinoma":
       return "선암";

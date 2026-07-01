@@ -1,38 +1,89 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Gender, Histology, PatientProfile } from "@/types";
+import {
+  EMPTY_PATIENT_PROFILE,
+  hasPatientProfileInfo,
+} from "@/lib/patient-profile";
 import { usesNsclcBiomarkerPanel } from "@/lib/utils";
+import type { Gender, Histology, PatientProfile } from "@/types";
 
 const STORAGE_KEY = "lca-patient-profile";
 
-function loadStoredProfile(): Partial<PatientProfile> | null {
+interface StoredProfile extends Partial<PatientProfile> {
+  configured?: boolean;
+}
+
+function loadStoredProfile(): StoredProfile | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Partial<PatientProfile>) : null;
+    return raw ? (JSON.parse(raw) as StoredProfile) : null;
   } catch {
     return null;
   }
 }
 
+function inferConfigured(stored: StoredProfile | null): boolean {
+  if (!stored) return false;
+  if (stored.configured === false) return false;
+  if (stored.configured === true) return true;
+  return (
+    stored.age != null || stored.gender != null || stored.histology != null
+  );
+}
+
+function persistProfile(configured: boolean, profile: PatientProfile): void {
+  if (!configured) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ configured: false }));
+    return;
+  }
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      configured: true,
+      age: profile.age,
+      gender: profile.gender,
+      histology: profile.histology,
+      selectedMutations: profile.selectedMutations,
+      pdl1: profile.pdl1,
+    }),
+  );
+}
+
 export function usePatientProfile() {
   const stored = loadStoredProfile();
-  const [age, setAge] = useState<number>(stored?.age ?? 60);
-  const [gender, setGender] = useState<Gender>(stored?.gender ?? "female");
-  const [histology, setHistology] = useState<Histology>(
-    stored?.histology ?? "adenocarcinoma",
+  const initialConfigured = inferConfigured(stored);
+
+  const [configured, setConfigured] = useState(initialConfigured);
+  const [age, setAge] = useState<number | null>(
+    initialConfigured ? (stored?.age ?? null) : null,
+  );
+  const [gender, setGender] = useState<Gender | null>(
+    initialConfigured ? (stored?.gender ?? null) : null,
+  );
+  const [histology, setHistology] = useState<Histology | null>(
+    initialConfigured ? (stored?.histology ?? null) : null,
   );
   const [selectedMutations, setSelectedMutations] = useState<string[]>(
-    stored?.selectedMutations ?? ["none"],
+    initialConfigured
+      ? (stored?.selectedMutations ?? EMPTY_PATIENT_PROFILE.selectedMutations)
+      : EMPTY_PATIENT_PROFILE.selectedMutations,
   );
-  const [pdl1, setPdl1] = useState<string>(stored?.pdl1 ?? "unknown");
+  const [pdl1, setPdl1] = useState<string>(
+    initialConfigured
+      ? (stored?.pdl1 ?? EMPTY_PATIENT_PROFILE.pdl1)
+      : EMPTY_PATIENT_PROFILE.pdl1,
+  );
+
+  const profile = useMemo<PatientProfile>(
+    () => ({ age, gender, histology, selectedMutations, pdl1 }),
+    [age, gender, histology, selectedMutations, pdl1],
+  );
 
   useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ age, gender, histology, selectedMutations, pdl1 }),
-    );
-  }, [age, gender, histology, selectedMutations, pdl1]);
+    if (!configured) return;
+    persistProfile(true, profile);
+  }, [configured, profile]);
 
-  const setHistologyAndResetBiomarkers = (h: Histology) => {
+  const setHistologyAndResetBiomarkers = (h: Histology | null) => {
     setHistology(h);
     if (!usesNsclcBiomarkerPanel(h)) {
       setSelectedMutations(["none"]);
@@ -58,17 +109,47 @@ export function usePatientProfile() {
     setSelectedMutations(["none"]);
   };
 
-  const profile = useMemo<PatientProfile>(
-    () => ({ age, gender, histology, selectedMutations, pdl1 }),
-    [age, gender, histology, selectedMutations, pdl1],
-  );
+  const skipProfile = () => {
+    setConfigured(false);
+    setAge(null);
+    setGender(null);
+    setHistology(null);
+    setSelectedMutations(EMPTY_PATIENT_PROFILE.selectedMutations);
+    setPdl1(EMPTY_PATIENT_PROFILE.pdl1);
+    persistProfile(false, EMPTY_PATIENT_PROFILE);
+  };
+
+  const saveProfile = () => {
+    if (!hasPatientProfileInfo(profile)) {
+      skipProfile();
+      return;
+    }
+    setConfigured(true);
+    persistProfile(true, profile);
+  };
+
+  const applyProfile = (next: PatientProfile, nextConfigured: boolean) => {
+    setAge(next.age);
+    setGender(next.gender);
+    setHistology(next.histology);
+    setSelectedMutations(next.selectedMutations);
+    setPdl1(next.pdl1);
+    setConfigured(nextConfigured);
+    persistProfile(nextConfigured, next);
+  };
 
   return {
     profile,
+    configured,
+    setConfigured,
     setAge,
     setGender,
     setHistology: setHistologyAndResetBiomarkers,
     toggleMutation,
     resetMutations,
+    setPdl1,
+    skipProfile,
+    saveProfile,
+    applyProfile,
   };
 }

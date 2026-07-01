@@ -17,12 +17,12 @@ const PrintPatientSummary = ({ profile }: PrintPatientSummaryProps) => {
       </h4>
       <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-xs">
         <div>
-          <span className="font-medium text-muted-foreground">연령:</span> {age}
-          세
+          <span className="font-medium text-muted-foreground">연령:</span>{' '}
+          {age != null ? `${age}세` : '-'}
         </div>
         <div>
-          <span className="font-medium text-muted-foreground">성별:</span>{" "}
-          {gender === "male" ? "남성" : "여성"}
+          <span className="font-medium text-muted-foreground">성별:</span>{' '}
+          {gender === 'male' ? '남성' : gender === 'female' ? '여성' : '-'}
         </div>
         <div>
           <span className="font-medium text-muted-foreground">

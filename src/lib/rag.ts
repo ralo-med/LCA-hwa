@@ -7,6 +7,7 @@ import {
   buildPatientContextBlock,
   type GuidePatientContext,
 } from "@/lib/guide-patient-context";
+import { resolveProfileForSurvival } from "@/lib/patient-profile";
 import {
   buildSurvivalDashboardBlock,
   isSurvivalDashboardQuery,
@@ -251,7 +252,7 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 
 export function resolveTargetDocs(
   query: string,
-  histology: Histology,
+  histology: Histology | null,
   opts: { includeClinician?: boolean } = {},
 ): GuideDocId[] {
   const docs: GuideDocId[] = [];
@@ -1213,9 +1214,10 @@ function buildKoreanSearchQuery(
   const mentionsSubtype = /소세포|비소세포|선암|편평|샘암|small\s*cell|squamous|adeno/i.test(
     query,
   );
-  const parts = mentionsSubtype
-    ? [query]
-    : [query, histologyLabel(profile.histology)];
+  const parts =
+    mentionsSubtype || profile.histology == null
+      ? [query]
+      : [query, histologyLabel(profile.histology)];
   const biomarker = biomarkerSearchHint(profile);
   if (biomarker) parts.push(biomarker);
   const hint = koTopicHint(query);
@@ -1234,7 +1236,11 @@ async function translateQueryForRetrieval(
   const mentionsSubtype = /소세포|비소세포|선암|편평|샘암|small\s*cell|squamous|adeno/i.test(
     query,
   );
-  const hLabel = mentionsSubtype ? "(question specifies its own subtype)" : histologyLabel(profile.histology);
+  const hLabel = mentionsSubtype
+    ? "(question specifies its own subtype)"
+    : profile.histology == null
+      ? "(patient histology not provided)"
+      : histologyLabel(profile.histology);
   const docHint = targetDocs
     .map((id) => GUIDE_DOC_META[id].fileName)
     .join(", ");
@@ -2345,7 +2351,9 @@ export async function planChatResponse(
   if (isSurvivalDashboardQuery(question)) {
     let survival = patientContext.survival ?? null;
     if (patientContext.survival === undefined) {
-      survival = await estimateSurvival(patientContext.profile);
+      survival = await estimateSurvival(
+        resolveProfileForSurvival(patientContext.profile),
+      );
     }
     return {
       messages: buildSurvivalMessages(

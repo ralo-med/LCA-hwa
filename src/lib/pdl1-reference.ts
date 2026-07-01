@@ -75,8 +75,9 @@ const SCLC_REFERENCE: Pdl1SurvivalReference = {
 };
 
 export function getPdl1SurvivalReference(
-  histology: Histology,
+  histology: Histology | null,
 ): Pdl1SurvivalReference | null {
+  if (histology == null) return null;
   if (!usesNsclcBiomarkerPanel(histology)) return SCLC_REFERENCE;
   return NSCLC_REFERENCE;
 }

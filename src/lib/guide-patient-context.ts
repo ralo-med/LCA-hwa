@@ -1,4 +1,5 @@
 import { MUTATION_OPTIONS, PDL1_OPTIONS } from '@/constants';
+import { hasPatientProfileInfo, genderLabel } from '@/lib/patient-profile';
 import type { SurvivalEstimate } from '@/lib/survival-cbioportal';
 import { histologyLabel, usesNsclcBiomarkerPanel } from '@/lib/utils';
 import type { PatientProfile } from '@/types';
@@ -27,12 +28,20 @@ export function formatPdl1Label(pdl1: string): string {
 
 export function buildPatientContextBlock(ctx: GuidePatientContext): string {
   const { profile } = ctx;
-  const genderLabel = profile.gender === 'female' ? '여성' : '남성';
-  const lines = [
-    `- 기본: ${profile.age}세 ${genderLabel}, 조직형 ${histologyLabel(profile.histology)}`,
-  ];
+  if (!hasPatientProfileInfo(profile)) {
+    return '- 환자 정보: 미입력 (일반적인 폐암 안내 기준으로 답변)';
+  }
 
-  if (usesNsclcBiomarkerPanel(profile.histology)) {
+  const parts: string[] = [];
+  if (profile.age != null) parts.push(`${profile.age}세`);
+  if (profile.gender != null) parts.push(genderLabel(profile.gender));
+  if (profile.histology != null) {
+    parts.push(`조직형 ${histologyLabel(profile.histology)}`);
+  }
+
+  const lines = [`- 기본: ${parts.join(', ') || EMPTY}`];
+
+  if (profile.histology != null && usesNsclcBiomarkerPanel(profile.histology)) {
     lines.push(
       `- 드라이버 유전자 변이: ${formatMutationLabels(profile.selectedMutations)}`,
     );
@@ -43,7 +52,9 @@ export function buildPatientContextBlock(ctx: GuidePatientContext): string {
 }
 
 export function biomarkerSearchHint(profile: PatientProfile): string {
-  if (!usesNsclcBiomarkerPanel(profile.histology)) return '';
+  if (profile.histology == null || !usesNsclcBiomarkerPanel(profile.histology)) {
+    return '';
+  }
   const parts: string[] = [];
   if (!profile.selectedMutations.includes('none')) {
     parts.push(formatMutationLabels(profile.selectedMutations));

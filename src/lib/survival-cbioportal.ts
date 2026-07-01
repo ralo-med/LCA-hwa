@@ -33,6 +33,7 @@ import {
   type UntreatedSurvivalEstimate,
 } from "@/lib/untreated-estimate";
 import { usesDriverMutationFilter } from "@/lib/utils";
+import { resolveProfileForSurvival } from "@/lib/patient-profile";
 import type { Histology, PatientProfile } from "@/types";
 
 export type { KoreanReference } from "@/lib/korean-reference";
@@ -383,7 +384,8 @@ function emptyEstimate(
 export async function estimateSurvival(
   profile: PatientProfile,
 ): Promise<SurvivalEstimate> {
-  const { histology, gender, age, selectedMutations } = profile;
+  const resolved = resolveProfileForSurvival(profile);
+  const { histology, gender, age, selectedMutations } = resolved;
   const ageBand = getAgeDecadeBand(age);
   const koreanReference = getKoreanReference(histology);
 

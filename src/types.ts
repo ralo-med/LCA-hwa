@@ -44,9 +44,9 @@ export interface SurvivalResult {
 }
 
 export interface PatientProfile {
-  age: number;
-  gender: Gender;
-  histology: Histology;
+  age: number | null;
+  gender: Gender | null;
+  histology: Histology | null;
   selectedMutations: string[];
   pdl1: string;
 }

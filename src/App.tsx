@@ -10,6 +10,7 @@ import DashboardPage from '@/pages/DashboardPage';
 import LandingPage from '@/pages/LandingPage';
 import GuideChatPage from '@/pages/GuideChatPage';
 import GuidePdfsPage from '@/pages/GuidePdfsPage';
+import PatientProfilePage from '@/pages/PatientProfilePage';
 import { loadCohort } from '@/lib/survival-cbioportal';
 import type { Histology } from '@/types';
 
@@ -39,6 +40,7 @@ const App = () => {
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<LandingPage />} />
+              <Route path="/profile" element={<PatientProfilePage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/guide-chat" element={<GuideChatPage />} />
               <Route path="/guides" element={<GuidePdfsPage />} />
