@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ModelSettingsDialog } from "@/components/ModelSettingsDialog";
+import { ShareButton } from "@/components/ShareButton";
 import { useGuideChat } from "@/hooks/useGuideChat";
 import { useLlmSettings } from "@/hooks/useLlmSettings";
 import { usePatientProfile } from "@/hooks/usePatientProfile";
@@ -115,7 +116,7 @@ const GuideChatPage = () => {
               </span>
               <span className="text-muted-foreground/40">·</span>
               <Link
-                to="/"
+                to="/dashboard"
                 className="text-primary underline-offset-4 hover:underline"
               >
                 환자 정보 변경
@@ -140,8 +141,10 @@ const GuideChatPage = () => {
         <Card className="flex min-h-0 flex-1 flex-col">
           <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              가이드라인 기반 상담
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <MessageSquare className="h-4 w-4" />
+              </span>
+              폐암 안내 도우미
             </CardTitle>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
               <Button
@@ -176,24 +179,37 @@ const GuideChatPage = () => {
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
             <div className="custom-scrollbar min-h-[min(28rem,55vh)] flex-1 space-y-4 overflow-y-auto rounded-lg border bg-muted/30 p-4">
               {chat.history.length === 0 && (
-                <div className="flex min-h-[min(24rem,48vh)] flex-col items-center justify-center space-y-4 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    자동 모드에서는 평소엔 대화하고, 폐암·치료 질문일 때만
-                    가이드라인을 찾아 답해요.
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {SUGGESTIONS.map((q) => (
-                      <Button
-                        key={q}
-                        variant="outline"
-                        size="sm"
-                        className="h-auto min-h-[44px] whitespace-normal px-4 py-2.5 text-left text-sm"
-                        disabled={!llm.isChatReady || !chat.dataReady}
-                        onClick={() => chat.setInput(q)}
-                      >
-                        {q}
-                      </Button>
-                    ))}
+                <div className="flex min-h-[min(24rem,48vh)] flex-col items-center justify-center gap-5 text-center">
+                  <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary">
+                    <MessageSquare className="h-8 w-8" />
+                  </span>
+                  <div className="space-y-1.5">
+                    <p className="text-lg font-bold text-foreground">
+                      안녕하세요, 폐암 안내 도우미예요
+                    </p>
+                    <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
+                      치료·부작용·일상생활 무엇이든 편하게 물어보세요. 어려운
+                      내용도 쉽게 풀어서 설명해 드릴게요.
+                    </p>
+                  </div>
+                  <div className="w-full space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      이런 걸 물어볼 수 있어요
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {SUGGESTIONS.map((q) => (
+                        <Button
+                          key={q}
+                          variant="outline"
+                          size="sm"
+                          className="h-auto min-h-[44px] whitespace-normal rounded-full px-4 py-2.5 text-left text-sm"
+                          disabled={!llm.isChatReady || !chat.dataReady}
+                          onClick={() => chat.setInput(q)}
+                        >
+                          {q}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -212,6 +228,15 @@ const GuideChatPage = () => {
                       msg.role === "user" ? "items-end" : "items-start",
                     )}
                   >
+                    {msg.role === "ai" && (
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-primary">
+                          <MessageSquare className="h-3.5 w-3.5" />
+                        </span>
+                        안내 도우미
+                      </div>
+                    )}
+
                     {msg.role === "ai" &&
                       msg.answerType &&
                       msg.answerType !== "chat" && (
@@ -247,6 +272,19 @@ const GuideChatPage = () => {
                         <p className="whitespace-pre-wrap">{displayText}</p>
                       )}
                     </div>
+
+                    {msg.role === "ai" && displayText.trim() && (
+                      <ShareButton
+                        payload={{
+                          title: "폐암 환자 안내 답변",
+                          text: displayText,
+                        }}
+                        label="공유"
+                        variant="ghost"
+                        size="sm"
+                        className="-ml-1 gap-1.5 text-muted-foreground hover:text-foreground"
+                      />
+                    )}
 
                     {msg.role === "ai" &&
                       msg.answerType === "guideline" &&

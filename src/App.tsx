@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
 import DashboardPage from '@/pages/DashboardPage';
+import LandingPage from '@/pages/LandingPage';
 import GuideChatPage from '@/pages/GuideChatPage';
 import GuidePdfsPage from '@/pages/GuidePdfsPage';
 import { loadCohort } from '@/lib/survival-cbioportal';
@@ -37,7 +38,8 @@ const App = () => {
           <AppNav />
           <main className="flex-1">
             <Routes>
-              <Route path="/" element={<DashboardPage />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/guide-chat" element={<GuideChatPage />} />
               <Route path="/guides" element={<GuidePdfsPage />} />
               <Route path="/about" element={<AboutPage />} />

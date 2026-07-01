@@ -26,7 +26,7 @@ type NavItem =
 const NAV_ITEMS: NavItem[] = [
   {
     kind: 'internal',
-    to: '/',
+    to: '/dashboard',
     label: '생존 대시보드',
     shortLabel: '대시보드',
     icon: LayoutDashboard,
@@ -112,8 +112,7 @@ const AppNav = () => {
                   className={linkClass(false)}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
-                  <span className="sm:hidden">{item.shortLabel}</span>
-                  <span className="hidden sm:inline">{item.label}</span>
+                  <span>{item.label}</span>
                   <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
                 </a>
               );
@@ -127,8 +126,7 @@ const AppNav = () => {
                 className={({ isActive }) => linkClass(isActive)}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                <span className="sm:hidden">{item.shortLabel}</span>
-                <span className="hidden sm:inline">{item.label}</span>
+                <span>{item.label}</span>
               </NavLink>
             );
           })}
