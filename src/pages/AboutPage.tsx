@@ -3,18 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const AboutPage = () => {
   return (
-    <InfoPageLayout title="서비스 소개">
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">화순전남대학교병원 폐암 환자 케어 플랫폼이란?</h2>
-        <p>
-          본 플랫폼은 폐암 환자와 보호자를 위한{' '}
-          <strong>AI 기반 정밀의료 보조·교육 서비스</strong>입니다. 환자
-          프로필(연령, 조직형, 유전자 변이, PD-L1 등)에 맞춘 생존 분석,
-          NCCN 환자용 가이드라인 기반 Q&A 챗봇, 원문 PDF 열람 기능을 한곳에서
-          제공합니다.
-        </p>
-      </section>
-
+    <InfoPageLayout
+      title="서비스 소개"
+      subtitle="폐암 환자와 보호자를 위한 AI 기반 정밀의료 보조·교육 서비스입니다. 맞춤 생존 분석, 가이드라인 기반 챗봇, 원문 PDF를 한곳에서 제공합니다."
+      image="/images/clinical.png"
+    >
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">우리의 목표</h2>
         <ul className="list-disc space-y-2 pl-5">

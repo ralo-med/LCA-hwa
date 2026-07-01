@@ -154,13 +154,12 @@ const PatientForm = ({
             </div>
             {biomarkerSelectable && (
               <p className="text-[11px] leading-relaxed text-muted-foreground">
-                여러 개 선택 시, 선택한 변이를 모두 가진 환자만 포함합니다.
+                여러 개 선택 시 모두 가진 환자만 집계합니다.
               </p>
             )}
             {!biomarkerSelectable && (
               <p className="text-[11px] leading-relaxed text-muted-foreground">
-                소세포폐암은 선암·편평상피암과 달리, EGFR·ALK 같은 유전자로
-                맞추는 치료(표적치료)를 보통 하지 않습니다.
+                소세포폐암은 표적치료 대상이 아니라 변이 선택이 없습니다.
               </p>
             )}
             <div
@@ -195,8 +194,7 @@ const PatientForm = ({
               <div className="space-y-2">
                 <Label>{pdl1Ref.title}</Label>
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  검사 결과 구간을 누르면, 그때 흔히 논의되는 치료와 생존에 대한
-                  쉬운 설명이 나옵니다.
+                  구간을 누르면 관련 치료·생존 설명이 나와요.
                 </p>
                 <div
                   className={

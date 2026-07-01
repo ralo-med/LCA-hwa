@@ -23,9 +23,8 @@ import { useLlmSettings } from "@/hooks/useLlmSettings";
 import { usePatientProfile } from "@/hooks/usePatientProfile";
 import { useSurvival } from "@/hooks/useSurvival";
 import { cn } from "@/lib/cn";
-import { formatMutationLabels, formatPdl1Label } from "@/lib/guide-patient-context";
 import { stripInlineGuidelineSection } from "@/lib/rag";
-import { histologyLabel, usesNsclcBiomarkerPanel } from "@/lib/utils";
+import { histologyLabel } from "@/lib/utils";
 import type { GuideSearchMode } from "@/types";
 
 const SUGGESTIONS = [
@@ -87,45 +86,31 @@ const GuideChatPage = () => {
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-background text-foreground">
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col p-4 md:p-8">
-        <Card className="mb-4 border-dashed">
-          <CardContent className="space-y-2.5 py-3 text-sm text-muted-foreground">
-            <div>
-              <span className="font-medium text-foreground">환자 정보</span>
-              <span className="mx-2 text-muted-foreground/40">·</span>
-              {profile.age}세 · {profile.gender === "female" ? "여성" : "남성"}{" "}
-              · {histologyLabel(profile.histology)}
-              {usesNsclcBiomarkerPanel(profile.histology) && (
-                <>
-                  <span className="mx-2 text-muted-foreground/40">·</span>
-                  변이 {formatMutationLabels(profile.selectedMutations)}
-                  <span className="mx-2 text-muted-foreground/40">·</span>
-                  PD-L1 {formatPdl1Label(profile.pdl1)}
-                </>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <span>
-                <span className="font-medium text-foreground">챗봇</span>{" "}
-                {llm.selectedModel.label}
-                {llm.isFreeTier && (
-                  <span className="ml-1 text-primary">(무료)</span>
-                )}
-                {!llm.canUseSelectedModel && (
-                  <span className="ml-1 text-amber-600 dark:text-amber-400">
-                    (API 키 필요)
-                  </span>
-                )}
-              </span>
+        <div className="mb-4 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">
+            {profile.age}세 {profile.gender === "female" ? "여성" : "남성"} ·{" "}
+            {histologyLabel(profile.histology)}
+          </span>
+          <span className="text-muted-foreground/40">·</span>
+          <Link
+            to="/dashboard"
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            정보 변경
+          </Link>
+          {!llm.canUseSelectedModel && (
+            <>
               <span className="text-muted-foreground/40">·</span>
-              <Link
-                to="/dashboard"
-                className="text-primary underline-offset-4 hover:underline"
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                className="text-amber-600 underline-offset-4 hover:underline dark:text-amber-400"
               >
-                환자 정보 변경
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+                API 키 필요
+              </button>
+            </>
+          )}
+        </div>
 
         <ModelSettingsDialog
           open={settingsOpen}
@@ -185,22 +170,16 @@ const GuideChatPage = () => {
             >
               {chat.history.length === 0 && (
                 <div className="flex min-h-[min(24rem,48vh)] flex-col items-center justify-center gap-5 text-center">
-                  <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary">
-                    <MessageSquare className="h-8 w-8" />
-                  </span>
-                  <div className="space-y-1.5">
-                    <p className="text-lg font-bold text-foreground">
-                      안녕하세요, 폐암 안내 도우미예요
-                    </p>
-                    <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-                      치료·부작용·일상생활 무엇이든 편하게 물어보세요. 어려운
-                      내용도 쉽게 풀어서 설명해 드릴게요.
-                    </p>
-                  </div>
+                  <img
+                    src="/images/care.png"
+                    alt=""
+                    aria-hidden
+                    className="h-28 w-28 rounded-full object-cover shadow-sm"
+                  />
+                  <p className="font-display text-xl font-bold text-foreground">
+                    무엇이 궁금하세요?
+                  </p>
                   <div className="w-full space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      이런 걸 물어볼 수 있어요
-                    </p>
                     <div className="flex flex-wrap justify-center gap-2">
                       {SUGGESTIONS.map((q) => (
                         <Button
@@ -404,8 +383,7 @@ const GuideChatPage = () => {
             </form>
 
             <p className="text-center text-xs text-muted-foreground">
-              본 챗봇은 환자 안내 자료 기반 AI 보조 정보이며, 실제 진료는 담당
-              의료진과 상의하세요.
+              AI 보조 정보이며, 실제 진료는 담당 의료진과 상의하세요.
             </p>
           </CardContent>
         </Card>

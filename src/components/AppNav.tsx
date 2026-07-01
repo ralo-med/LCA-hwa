@@ -26,18 +26,18 @@ type NavItem =
 const NAV_ITEMS: NavItem[] = [
   {
     kind: 'internal',
+    to: '/guide-chat',
+    label: '환자 안내 챗봇',
+    shortLabel: '환자 챗봇',
+    icon: BookOpen,
+  },
+  {
+    kind: 'internal',
     to: '/dashboard',
     label: '생존 대시보드',
     shortLabel: '대시보드',
     icon: LayoutDashboard,
     end: true,
-  },
-  {
-    kind: 'internal',
-    to: '/guide-chat',
-    label: '환자 안내 챗봇',
-    shortLabel: '환자 챗봇',
-    icon: BookOpen,
   },
   {
     kind: 'internal',
@@ -57,10 +57,10 @@ const NAV_ITEMS: NavItem[] = [
 
 const linkClass = (isActive: boolean, disabled?: boolean) =>
   cn(
-    'inline-flex min-h-[44px] min-w-[calc(50%-0.125rem)] flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-sm font-medium transition-colors sm:min-w-0 sm:flex-initial sm:gap-2 sm:px-3',
+    'inline-flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 items-center justify-center gap-1.5 border-b-2 px-2 py-2.5 text-sm font-medium transition-colors sm:min-w-0 sm:flex-initial sm:gap-2 sm:px-3',
     isActive
-      ? 'bg-background text-foreground shadow-sm'
-      : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
+      ? 'border-primary text-foreground'
+      : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
     disabled && 'pointer-events-none opacity-50',
   );
 
@@ -96,7 +96,7 @@ const AppNav = () => {
         </div>
 
         <nav
-          className="flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1"
+          className="-mb-px flex flex-wrap gap-x-1 border-t border-border/60 pt-1"
           aria-label="주요 메뉴"
         >
           {NAV_ITEMS.map((item) => {

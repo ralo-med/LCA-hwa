@@ -38,6 +38,31 @@ const DashboardPage = () => {
       <div className="mx-auto max-w-6xl p-4 md:p-8">
         <PrintHeader issueNumber={issueNumber} issuedAt={issuedAt} />
 
+        <div className="no-print mb-6 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <img
+              src="/images/clinical.png"
+              alt=""
+              aria-hidden
+              className="hidden h-14 w-20 rounded-lg object-cover shadow-sm sm:block"
+            />
+            <div>
+              <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
+                생존 분석
+              </h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                환자 조건에 맞춘 공개 코호트 기반 추정
+              </p>
+            </div>
+          </div>
+          <ShareButton
+            payload={{ title: "폐암 생존 분석 결과", text: shareText }}
+            label="결과 공유"
+            variant="outline"
+            size="sm"
+          />
+        </div>
+
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           <PatientForm
             profile={profile}
@@ -49,14 +74,6 @@ const DashboardPage = () => {
           />
 
           <main className="print-full space-y-6 lg:col-span-8">
-            <div className="no-print flex justify-end">
-              <ShareButton
-                payload={{ title: '폐암 생존 분석 결과', text: shareText }}
-                label="결과 공유"
-                variant="outline"
-                size="sm"
-              />
-            </div>
             <SurvivalSummary
               data={survival.data}
               isLoading={survival.isLoading}

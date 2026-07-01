@@ -26,18 +26,17 @@ const ROLE_ITEMS: RoleItem[] = [
 const LandingPage = () => {
   return (
     <div className="relative overflow-hidden bg-background text-foreground">
-      {/* 배경: 은은한 컬러 메시 + 종이 질감 */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 bg-grain"
       >
-        <div className="absolute -right-32 -top-40 h-[38rem] w-[38rem] rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute -bottom-48 -left-24 h-[32rem] w-[32rem] rounded-full bg-chart-4/10 blur-3xl" />
+        <div className="absolute -right-40 -top-40 h-144 w-xl rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-48 -left-24 h-120 w-120 rounded-full bg-chart-4/10 blur-3xl" />
       </div>
 
-      <div className="mx-auto grid max-w-6xl gap-12 px-5 py-16 md:px-8 md:py-24 lg:grid-cols-12 lg:gap-16">
-        {/* 왼쪽: 에디토리얼 헤드라인 */}
-        <div className="animate-rise lg:col-span-6 lg:pt-6">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-14 md:px-8 md:py-20 lg:grid-cols-2 lg:gap-16">
+        {/* 왼쪽: 헤드라인 + 역할 선택 */}
+        <div className="animate-rise">
           <div className="flex items-center gap-3">
             <span className="h-px w-8 bg-primary/60" />
             <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
@@ -45,7 +44,7 @@ const LandingPage = () => {
             </span>
           </div>
 
-          <h1 className="font-display mt-8 text-pretty text-5xl font-bold leading-[1.16] tracking-tight md:text-6xl lg:text-[4rem]">
+          <h1 className="font-display mt-6 text-pretty text-4xl font-bold leading-[1.16] tracking-tight md:text-5xl">
             혼자 걷지 않도록,
             <br />
             <span className="relative whitespace-nowrap text-primary">
@@ -56,50 +55,46 @@ const LandingPage = () => {
               />
             </span>
           </h1>
-        </div>
 
-        {/* 오른쪽: 번호가 매겨진 역할 선택 리스트 */}
-        <div className="animate-rise lg:col-span-6 lg:pl-6" style={{ animationDelay: '0.08s' }}>
-          <p className="mb-2 text-sm font-medium text-muted-foreground">
-            어떤 분이신가요?
-          </p>
-          <div>
+          <div className="mt-10">
             {ROLE_ITEMS.map((item, idx) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.role}
                   to={item.to}
-                  className="group relative flex items-center gap-5 border-t border-border/70 py-6 transition-colors last:border-b hover:bg-foreground/[0.025]"
+                  className="group relative flex items-center gap-4 border-t border-border/70 py-5 pl-6 pr-5 transition-colors last:border-b hover:bg-foreground/2.5"
                 >
                   <span
                     aria-hidden
-                    className="absolute left-0 top-1/2 h-0 w-0.5 -translate-y-1/2 bg-primary transition-all duration-300 group-hover:h-10"
+                    className="absolute inset-y-2 left-0 w-1 origin-center scale-y-0 rounded-full bg-primary transition-transform duration-300 group-hover:scale-y-100"
                   />
-                  <span className="font-display w-8 text-2xl tabular-nums text-muted-foreground/45">
+                  <span className="font-display w-7 text-xl tabular-nums text-muted-foreground/45">
                     {String(idx + 1).padStart(2, '0')}
                   </span>
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="flex items-center gap-2 text-lg font-bold">
-                      <Icon className="h-5 w-5 text-primary" />
-                      {item.role}
-                    </span>
-                    <span className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      {item.description}
+                  <span className="flex items-center gap-2.5">
+                    <Icon className="h-5 w-5 text-primary" />
+                    <span>
+                      <span className="block text-lg font-bold leading-tight">
+                        {item.role}
+                      </span>
+                      <span className="mt-0.5 block text-sm text-muted-foreground">
+                        {item.description}
+                      </span>
                     </span>
                   </span>
-                  <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground/50 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary" />
+                  <ArrowRight className="ml-auto h-5 w-5 shrink-0 text-muted-foreground/50 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary" />
                 </Link>
               );
             })}
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
             <Link
               to="/guides"
               className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
             >
-              가이드라인 PDF 보기
+              가이드라인 PDF
             </Link>
             <Link
               to="/about"
@@ -109,12 +104,21 @@ const LandingPage = () => {
             </Link>
           </div>
         </div>
-      </div>
 
-      <div className="mx-auto max-w-6xl px-5 pb-12 md:px-8">
-        <p className="border-t border-border/60 pt-6 text-xs text-muted-foreground/80">
-          AI 보조 정보이며, 실제 진료는 담당 전문의와 상의하세요.
-        </p>
+        {/* 오른쪽: 브랜드 일러스트 */}
+        <div
+          className="animate-rise relative order-first lg:order-last"
+          style={{ animationDelay: '0.08s' }}
+        >
+          <div className="overflow-hidden rounded-[1.75rem] border border-border/60 shadow-sm">
+            <img
+              src="/images/care.png"
+              alt="환자 곁에서 함께하는 보호자 일러스트"
+              className="aspect-4/3 w-full object-cover"
+              loading="eager"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
