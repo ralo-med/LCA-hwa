@@ -1,6 +1,7 @@
 import { BookOpen, ExternalLink, FileText, LayoutDashboard, Stethoscope } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { FontScaleControl } from '@/components/FontScaleControl';
 import { cn } from '@/lib/cn';
 
 import { DOCTORS_URL } from '@/constants/site';
@@ -56,7 +57,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const linkClass = (isActive: boolean, disabled?: boolean) =>
   cn(
-    'inline-flex min-w-[calc(50%-0.125rem)] flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-sm font-medium transition-colors sm:min-w-0 sm:flex-initial sm:gap-2 sm:px-3',
+    'inline-flex min-h-[44px] min-w-[calc(50%-0.125rem)] flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-sm font-medium transition-colors sm:min-w-0 sm:flex-initial sm:gap-2 sm:px-3',
     isActive
       ? 'bg-background text-foreground shadow-sm'
       : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
@@ -88,7 +89,10 @@ const AppNav = () => {
               </p>
             </div>
           </NavLink>
-          <ThemeToggle />
+          <div className="flex shrink-0 items-center gap-2">
+            <FontScaleControl />
+            <ThemeToggle />
+          </div>
         </div>
 
         <nav

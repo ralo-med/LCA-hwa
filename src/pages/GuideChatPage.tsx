@@ -1,7 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ALargeSmall,
   ChevronRight,
   Loader2,
   MessageSquare,
@@ -18,10 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ModelSettingsDialog } from "@/components/ModelSettingsDialog";
-import { useChatFontSize } from "@/hooks/useChatFontSize";
 import { useGuideChat } from "@/hooks/useGuideChat";
 import { useLlmSettings } from "@/hooks/useLlmSettings";
-import { CHAT_FONT_SIZE_OPTIONS } from "@/lib/chat-font-size";
 import { usePatientProfile } from "@/hooks/usePatientProfile";
 import { useSurvival } from "@/hooks/useSurvival";
 import { cn } from "@/lib/cn";
@@ -55,7 +52,6 @@ const INPUT_PLACEHOLDER: Record<GuideSearchMode, string> = {
 
 const GuideChatPage = () => {
   const llm = useLlmSettings();
-  const chatFont = useChatFontSize();
   const { profile } = usePatientProfile();
   const survival = useSurvival(profile);
   const chat = useGuideChat(
@@ -148,39 +144,15 @@ const GuideChatPage = () => {
               가이드라인 기반 상담
             </CardTitle>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              <div
-                className="flex items-center gap-0.5 rounded-md border bg-background p-0.5"
-                role="group"
-                aria-label="채팅 글자 크기"
-              >
-                <span className="hidden px-1.5 text-[10px] text-muted-foreground sm:inline">
-                  <ALargeSmall className="mr-0.5 inline h-3 w-3" />
-                  글자
-                </span>
-                {CHAT_FONT_SIZE_OPTIONS.map((opt) => (
-                  <Button
-                    key={opt.id}
-                    type="button"
-                    variant={chatFont.sizeId === opt.id ? "default" : "ghost"}
-                    size="sm"
-                    className="h-7 px-2 text-[10px]"
-                    onClick={() => chatFont.setSize(opt.id)}
-                    aria-pressed={chatFont.sizeId === opt.id}
-                    aria-label={`글자 크기 ${opt.label}`}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1.5 text-xs"
+                className="gap-1.5"
                 onClick={() => setSettingsOpen(true)}
                 aria-label="AI 모델 설정"
               >
-                <Settings className="h-3.5 w-3.5" />
+                <Settings className="h-4 w-4" />
                 설정
                 {!llm.isChatReady && (
                   <span className="text-amber-600 dark:text-amber-400">!</span>
@@ -190,12 +162,12 @@ const GuideChatPage = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1.5 text-xs"
+                className="gap-1.5"
                 onClick={chat.reset}
                 disabled={chat.isChatting || chat.history.length === 0}
                 aria-label="채팅 초기화"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
+                <RotateCcw className="h-4 w-4" />
                 초기화
               </Button>
             </div>
@@ -215,7 +187,7 @@ const GuideChatPage = () => {
                         key={q}
                         variant="outline"
                         size="sm"
-                        className="h-auto whitespace-normal px-3 py-2 text-left text-xs"
+                        className="h-auto min-h-[44px] whitespace-normal px-4 py-2.5 text-left text-sm"
                         disabled={!llm.isChatReady || !chat.dataReady}
                         onClick={() => chat.setInput(q)}
                       >
@@ -263,18 +235,14 @@ const GuideChatPage = () => {
 
                     <div
                       className={cn(
-                        "max-w-[90%] rounded-lg px-3 py-2 leading-relaxed",
-                        chatFont.className,
+                        "max-w-[90%] rounded-2xl px-4 py-2.5 text-base leading-relaxed",
                         msg.role === "user"
-                          ? "rounded-tr-none bg-primary text-primary-foreground"
-                          : "rounded-tl-none border bg-card text-foreground shadow-sm",
+                          ? "rounded-tr-sm bg-primary text-primary-foreground"
+                          : "rounded-tl-sm border bg-card text-foreground shadow-sm",
                       )}
                     >
                       {msg.role === "ai" ? (
-                        <ChatMarkdown
-                          content={displayText}
-                          className={chatFont.className}
-                        />
+                        <ChatMarkdown content={displayText} className="text-base" />
                       ) : (
                         <p className="whitespace-pre-wrap">{displayText}</p>
                       )}
@@ -287,7 +255,7 @@ const GuideChatPage = () => {
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-8 max-w-[90%] gap-1.5 border-amber-200/80 bg-amber-50/50 text-xs text-amber-900 hover:bg-amber-100/80 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-950/50"
+                          className="max-w-[90%] gap-1.5 border-amber-200/80 bg-amber-50/50 text-amber-900 hover:bg-amber-100/80 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-950/50"
                           disabled={
                             !llm.isChatReady ||
                             chat.isChatting ||
@@ -296,27 +264,22 @@ const GuideChatPage = () => {
                           onClick={() => chat.requestSupplement(i)}
                         >
                           {chat.supplementLoadingIndex === i ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
-                            <PlusCircle className="h-3.5 w-3.5" />
+                            <PlusCircle className="h-4 w-4" />
                           )}
                           추가 정보
                         </Button>
                       )}
 
                     {msg.role === "ai" && msg.supplementText && (
-                      <div
-                        className={cn(
-                          "w-full max-w-[90%] rounded-lg border border-sky-200/80 bg-sky-50/90 px-3 py-2.5 leading-relaxed dark:border-sky-900/60 dark:bg-sky-950/35",
-                          chatFont.className,
-                        )}
-                      >
-                        <p className="mb-2 text-[10px] font-medium text-sky-800 dark:text-sky-200">
+                      <div className="w-full max-w-[90%] rounded-2xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-base leading-relaxed dark:border-sky-900/60 dark:bg-sky-950/35">
+                        <p className="mb-2 text-xs font-semibold text-sky-800 dark:text-sky-200">
                           추가 안내
                         </p>
                         <ChatMarkdown
                           content={msg.supplementText}
-                          className={chatFont.className}
+                          className="text-base"
                         />
                       </div>
                     )}
@@ -343,12 +306,7 @@ const GuideChatPage = () => {
                                   {s.fileName}
                                   <span className="mx-1">·</span>p.{s.page}
                                 </p>
-                                <p
-                                  className={cn(
-                                    "mt-1 leading-relaxed text-amber-950/90 dark:text-amber-50/90",
-                                    chatFont.className,
-                                  )}
-                                >
+                                <p className="mt-1 text-sm leading-relaxed text-amber-950/90 dark:text-amber-50/90">
                                   {s.excerpt}
                                 </p>
                               </div>
@@ -376,11 +334,11 @@ const GuideChatPage = () => {
                   type="button"
                   variant={chat.guideMode === value ? "default" : "outline"}
                   size="sm"
-                  className="h-8 gap-1.5 text-xs"
+                  className="gap-1.5"
                   onClick={() => chat.setGuideMode(value)}
                   disabled={chat.isChatting}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className="h-4 w-4" />
                   {label}
                 </Button>
               ))}
