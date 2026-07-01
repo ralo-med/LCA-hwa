@@ -6,10 +6,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import { embedBatchGoogle } from './lib/google-embed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 dotenv.config({ path: path.join(ROOT, '.env') });
-const API_KEY = process.env.VITE_OPENAI_API_KEY?.trim();
+const API_KEY = (
+  process.env.VITE_GOOGLE_API_KEY ??
+  process.env.GOOGLE_API_KEY ??
+  ''
+).trim();
 
 const store = JSON.parse(
   fs.readFileSync(path.join(ROOT, 'public/data/guide-chunks.json'), 'utf8'),
@@ -138,13 +143,8 @@ function extractExcerpt(text, q) {
 }
 
 async function embed(text) {
-  const res = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
-    body: JSON.stringify({ model: 'text-embedding-3-small', input: text }),
-  });
-  if (!res.ok) throw new Error(`embed ${res.status}`);
-  return (await res.json()).data[0].embedding;
+  const [vector] = await embedBatchGoogle(API_KEY, [text], 'RETRIEVAL_QUERY');
+  return vector;
 }
 
 const EN_MAP = {

@@ -130,7 +130,7 @@ export const CHAT_MODELS: ChatModelOption[] = [
   },
 ];
 
-export const DEFAULT_CHAT_MODEL_ID = 'gpt-5.4-nano';
+export const DEFAULT_CHAT_MODEL_ID = 'gemini-3.1-flash-lite';
 
 export function getChatModel(id: string): ChatModelOption {
   return (

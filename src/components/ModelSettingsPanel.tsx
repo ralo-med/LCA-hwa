@@ -26,7 +26,7 @@ interface ModelSettingsPanelProps {
 
 const API_KEY_PLACEHOLDERS: Record<LlmProvider, string> = {
   openai: 'sk-...',
-  google: 'AIza...',
+  google: 'AIza... 또는 AQ....',
   anthropic: 'sk-ant-...',
 };
 
@@ -122,9 +122,10 @@ export function ModelSettingsPanel({
         ))}
       </div>
 
-      {!settings.openAiAvailable && (
+      {!settings.embeddingAvailable && (
         <p className="text-xs text-amber-700 dark:text-amber-300">
-          가이드라인 벡터 검색에는 OpenAI 키가 필요합니다.
+          가이드라인 벡터 검색(임베딩)에는 Google API 키가 필요합니다. 키가 없으면
+          키워드 검색으로 동작합니다.
         </p>
       )}
 

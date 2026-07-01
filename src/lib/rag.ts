@@ -1,10 +1,7 @@
 import { EMBEDDING_MODEL, TEXT_MODEL } from "@/constants";
-import { isOpenAIAvailable } from "@/lib/llm-settings";
-import {
-  callOpenAIEmbed,
-  callOpenAIChat,
-  type OpenAIChatMessage,
-} from "@/lib/openai";
+import { embedQueryText, isEmbeddingAvailable } from "@/lib/embeddings";
+import { callLlmChat, type LlmChatMessage } from "@/lib/llm-client";
+import { canUseModel } from "@/lib/llm-settings";
 import {
   biomarkerSearchHint,
   buildPatientContextBlock,
@@ -103,7 +100,10 @@ const GENERIC_BOILERPLATE =
   /Treatment by clinical stage.*very important for planning|Everyone with cancer should carefully consider all of the treatment options|Learn more about your primary treatment in the next chapters|Other specialists who may be involved in your care include/i;
 
 function hasEmbeddings(store: GuideChunkStore): boolean {
-  return store.chunks.some((c) => c.embedding.length > 0);
+  return (
+    store.model === EMBEDDING_MODEL &&
+    store.chunks.some((c) => c.embedding.length > 0)
+  );
 }
 
 function keywordScore(query: string, text: string): number {
@@ -927,11 +927,11 @@ async function translateQueryForRetrieval(
     .map((m) => `${m.role === "user" ? "Patient" : "Assistant"}: ${m.text}`)
     .join("\n");
 
-  if (!isOpenAIAvailable()) {
+  if (!canUseModel(TEXT_MODEL)) {
     return query;
   }
 
-  const translated = await callOpenAIChat(
+  const translated = await callLlmChat(
     [
       {
         role: "system",
@@ -944,7 +944,7 @@ async function translateQueryForRetrieval(
       },
     ],
     TEXT_MODEL,
-    2,
+    { retries: 2 },
   );
   return translated.trim() || query;
 }
@@ -1318,7 +1318,7 @@ export function shouldSearchGuidelines(
   return false;
 }
 
-function toOpenAIHistory(history: GuideChatMessage[]): OpenAIChatMessage[] {
+function toChatHistory(history: GuideChatMessage[]): LlmChatMessage[] {
   return history.slice(-MAX_HISTORY_TURNS).map((message) => ({
     role: message.role === "user" ? "user" : "assistant",
     content: message.text,
@@ -1344,10 +1344,7 @@ export function shouldShowCitations(
 }
 
 export async function embedText(text: string): Promise<number[]> {
-  if (!isOpenAIAvailable()) {
-    throw new Error("OPENAI_API_KEY_MISSING");
-  }
-  return callOpenAIEmbed(text, EMBEDDING_MODEL);
+  return embedQueryText(text);
 }
 
 export async function retrieveChunks(
@@ -1363,7 +1360,7 @@ export async function retrieveChunks(
   const pool = filterChunkPool(store.chunks, targetDocs);
   const recentPages = getRecentlyCitedPages(priorHistory);
 
-  const canVectorSearch = hasEmbeddings(store) && isOpenAIAvailable();
+  const canVectorSearch = hasEmbeddings(store) && isEmbeddingAvailable();
   const ranked = canVectorSearch
     ? await (async () => {
         const englishQuery = await translateQueryForRetrieval(
@@ -1468,7 +1465,7 @@ const CHATBOT_PERSONA = `당신은 화순전남대학교병원 폐암 환자 안
 - 항목마다 "제목:", "(원문 근거: …)", "원문 내용은 아래처럼" 같은 **메타·중복 라벨 금지**. 환자에게 읽히는 한국어 설명만 쓰세요. (원문은 UI에 따로 표시됩니다.)`;
 
 export interface ChatPlan {
-  messages: OpenAIChatMessage[];
+  messages: LlmChatMessage[];
   citations: GuideChatSource[];
   searchedGuidelines: boolean;
   retrievalQuery: string;
@@ -1588,7 +1585,7 @@ export function buildChitchatMessages(
   question: string,
   patientContext: GuidePatientContext,
   priorHistory: GuideChatMessage[] = [],
-): OpenAIChatMessage[] {
+): LlmChatMessage[] {
   const offTopic = isOffTopicQuery(question);
   const offTopicHint = offTopic
     ? `\n- 질문 주제는 폐암 안내와 직접 관련이 없습니다. 2~3문장으로 정중히 답한 뒤, 폐암·치료·부작용·영양·일상 관리 질문을 도와드릴 수 있다고 짧게 안내하세요.`
@@ -1604,7 +1601,7 @@ export function buildChitchatMessages(
 **현재 환자 정보 (대시보드)**
 ${buildPatientContextBlock(patientContext)}`,
     },
-    ...toOpenAIHistory(priorHistory),
+    ...toChatHistory(priorHistory),
     { role: "user", content: question },
   ];
 }
@@ -1614,7 +1611,7 @@ export function buildGuidelineFollowUpNoMatchMessages(
   topic: string,
   patientContext: GuidePatientContext,
   priorHistory: GuideChatMessage[] = [],
-): OpenAIChatMessage[] {
+): LlmChatMessage[] {
   return [
     {
       role: "system",
@@ -1632,7 +1629,7 @@ export function buildGuidelineFollowUpNoMatchMessages(
 **현재 환자 정보 (대시보드)**
 ${buildPatientContextBlock(patientContext)}`,
     },
-    ...toOpenAIHistory(priorHistory),
+    ...toChatHistory(priorHistory),
     { role: "user", content: question },
   ];
 }
@@ -1642,7 +1639,7 @@ export function buildGeneralMedicalMessages(
   patientContext: GuidePatientContext,
   priorHistory: GuideChatMessage[] = [],
   retrievalQuery?: string,
-): OpenAIChatMessage[] {
+): LlmChatMessage[] {
   const topic = extractConversationTopic(priorHistory);
   const contextHint =
     topic && topic !== question ? `\n\n(대화 맥락: 이전 주제 — ${topic})` : "";
@@ -1661,7 +1658,7 @@ export function buildGeneralMedicalMessages(
 **현재 환자 정보 (대시보드)**
 ${buildPatientContextBlock(patientContext)}`,
     },
-    ...toOpenAIHistory(priorHistory),
+    ...toChatHistory(priorHistory),
     {
       role: "user",
       content: `${retrievalQuery && retrievalQuery !== question ? `[검색 맥락] ${retrievalQuery}\n\n` : ""}## 질문\n${question}${contextHint}`,
@@ -1674,7 +1671,7 @@ export function buildRagMessages(
   patientContext: GuidePatientContext,
   citations: GuideChatSource[],
   priorHistory: GuideChatMessage[] = [],
-): OpenAIChatMessage[] {
+): LlmChatMessage[] {
   const sourceBlock = formatExcerptSources(citations);
 
   const formatHint = /(\d+)\s*줄|한\s*줄|두\s*줄|세\s*줄/.exec(question);
@@ -1713,7 +1710,7 @@ ${answerGuide}
 **현재 환자 정보 (대시보드)**
 ${buildPatientContextBlock(patientContext)}`,
     },
-    ...toOpenAIHistory(priorHistory),
+    ...toChatHistory(priorHistory),
     {
       role: "user",
       content: `## 참고 원문
@@ -1856,7 +1853,7 @@ export function buildSupplementMessages(
   question: string,
   guidelineAnswer: string,
   patientContext: GuidePatientContext,
-): OpenAIChatMessage[] {
+): LlmChatMessage[] {
   const covered = summarizeCoveredPoints(guidelineAnswer);
 
   return [
@@ -1885,7 +1882,7 @@ export function buildSurvivalMessages(
   patientContext: GuidePatientContext,
   survival: SurvivalEstimate | null,
   priorHistory: GuideChatMessage[] = [],
-): OpenAIChatMessage[] {
+): LlmChatMessage[] {
   const survivalBlock = buildSurvivalDashboardBlock(survival);
 
   return [
@@ -1909,7 +1906,7 @@ ${buildPatientContextBlock(patientContext)}
 
 ${survivalBlock}`,
     },
-    ...toOpenAIHistory(priorHistory),
+    ...toChatHistory(priorHistory),
     { role: "user", content: question },
   ];
 }

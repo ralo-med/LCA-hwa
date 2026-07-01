@@ -6,6 +6,10 @@ import {
 
 const STORAGE_KEY = 'lca-llm-settings';
 const CHANGE_EVENT = 'lca-llm-settings-change';
+const LEGACY_DEFAULT_MODEL_IDS = new Set([
+  'gpt-5.4-nano',
+  'gemini-2.5-flash',
+]);
 
 function notifyChange(): void {
   window.dispatchEvent(new Event(CHANGE_EVENT));
@@ -33,7 +37,10 @@ export function isValidApiKey(provider: LlmProvider, key: string): boolean {
     case 'openai':
       return trimmed.startsWith('sk-');
     case 'google':
-      return trimmed.startsWith('AIza') && trimmed.length >= 20;
+      return (
+        (trimmed.startsWith('AIza') || trimmed.startsWith('AQ.')) &&
+        trimmed.length >= 20
+      );
     case 'anthropic':
       return trimmed.startsWith('sk-ant-');
     default:
@@ -48,8 +55,12 @@ export function loadLlmSettings(): LlmSettingsState {
       return { selectedModelId: DEFAULT_CHAT_MODEL_ID, apiKeys: {} };
     }
     const parsed = JSON.parse(raw) as Partial<LlmSettingsState>;
+    let selectedModelId = parsed.selectedModelId ?? DEFAULT_CHAT_MODEL_ID;
+    if (LEGACY_DEFAULT_MODEL_IDS.has(selectedModelId)) {
+      selectedModelId = DEFAULT_CHAT_MODEL_ID;
+    }
     return {
-      selectedModelId: parsed.selectedModelId ?? DEFAULT_CHAT_MODEL_ID,
+      selectedModelId,
       apiKeys: parsed.apiKeys ?? {},
     };
   } catch {
@@ -65,6 +76,11 @@ export function saveLlmSettings(state: LlmSettingsState): void {
 export function getStoredApiKey(provider: LlmProvider): string {
   const stored = loadLlmSettings().apiKeys[provider]?.trim() ?? '';
   return isValidApiKey(provider, stored) ? stored : '';
+}
+
+export function getEnvGoogleKey(): string {
+  const env = import.meta.env.VITE_GOOGLE_API_KEY?.trim() ?? '';
+  return isValidApiKey('google', env) ? env : '';
 }
 
 export function getEnvOpenAIKey(): string {
@@ -84,9 +100,10 @@ export function getApiKey(provider: LlmProvider): string {
   const stored = getStoredApiKey(provider);
   if (stored) return stored;
 
-  // 무료 기본 모드: 서버 .env OpenAI 키만 사용
-  if (provider === 'openai' && !hasCustomApiKey()) {
-    return getEnvOpenAIKey();
+  if (!hasCustomApiKey()) {
+    if (provider === 'google') return getEnvGoogleKey();
+    // 벡터 검색 임베딩용 OpenAI 키
+    if (provider === 'openai') return getEnvOpenAIKey();
   }
 
   return '';
@@ -94,6 +111,11 @@ export function getApiKey(provider: LlmProvider): string {
 
 export function isProviderConfigured(provider: LlmProvider): boolean {
   return getApiKey(provider).length > 0;
+}
+
+export function isGoogleAvailable(): boolean {
+  if (getStoredApiKey('google')) return true;
+  return getEnvGoogleKey().length > 0;
 }
 
 export function isOpenAIAvailable(): boolean {
@@ -112,11 +134,12 @@ export function canUseModel(
     return true;
   }
 
-  // 무료: 기본 OpenAI 모델만 서버 키로 사용
+  // 무료: 기본 Gemini 모델은 서버 Google 키로 사용
   if (
     !hasCustomApiKey(apiKeys) &&
     modelId === DEFAULT_CHAT_MODEL_ID &&
-    getEnvOpenAIKey()
+    model.provider === 'google' &&
+    getEnvGoogleKey()
   ) {
     return true;
   }
@@ -134,11 +157,11 @@ export function getApiKeyForModel(modelId: string): string {
   }
 
   if (
-    model.provider === 'openai' &&
     !hasCustomApiKey(apiKeys) &&
-    modelId === DEFAULT_CHAT_MODEL_ID
+    modelId === DEFAULT_CHAT_MODEL_ID &&
+    model.provider === 'google'
   ) {
-    return getEnvOpenAIKey();
+    return getEnvGoogleKey();
   }
 
   return '';

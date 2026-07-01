@@ -22,9 +22,9 @@ export const PDL1_OPTIONS: Pdl1Option[] = [
   { id: "unknown", label: "결과 없음", bonus: 0 },
 ];
 
-export const TEXT_MODEL = "gpt-4o-mini";
-export const GUIDE_CHAT_MODEL = "gpt-5.4-nano";
-export const EMBEDDING_MODEL = "text-embedding-3-small";
+export const TEXT_MODEL = "gemini-3.1-flash-lite";
+export const GUIDE_CHAT_MODEL = "gemini-3.1-flash-lite";
+export const EMBEDDING_MODEL = "gemini-embedding-001";
 
 /** @deprecated use isOpenAIAvailable() from llm-settings */
 export function isOpenAIConfigured(): boolean {

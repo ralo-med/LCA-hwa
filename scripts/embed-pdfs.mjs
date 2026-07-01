@@ -3,6 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { PDFParse } from 'pdf-parse';
+import {
+  EMBEDDING_MODEL,
+  embedBatchGoogle,
+  isValidGoogleKey,
+} from './lib/google-embed.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -10,15 +15,14 @@ const ROOT = path.resolve(__dirname, '..');
 dotenv.config({ path: path.join(ROOT, '.env') });
 
 const API_KEY = (
-  process.env.VITE_OPENAI_API_KEY ??
-  process.env.OPENAI_API_KEY ??
+  process.env.VITE_GOOGLE_API_KEY ??
+  process.env.GOOGLE_API_KEY ??
   ''
 ).trim();
 
-const EMBEDDING_MODEL = 'text-embedding-3-small';
 const CHUNK_SIZE = 700;
 const CHUNK_OVERLAP = 120;
-const BATCH_SIZE = 100;
+const BATCH_SIZE = 50;
 
 const DOCS = [
   {
@@ -92,27 +96,7 @@ async function extractPdfChunks(pdfPath, docMeta) {
 }
 
 async function embedBatch(texts) {
-  const response = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: EMBEDDING_MODEL,
-      input: texts,
-    }),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Embedding API failed (${response.status}): ${err}`);
-  }
-
-  const json = await response.json();
-  return json.data
-    .sort((a, b) => a.index - b.index)
-    .map((item) => item.embedding);
+  return embedBatchGoogle(API_KEY, texts, 'RETRIEVAL_DOCUMENT');
 }
 
 async function main() {
@@ -136,9 +120,9 @@ async function main() {
       chunk.embedding = [];
     });
   } else {
-    if (!API_KEY || !API_KEY.startsWith('sk-') || API_KEY.includes('your_openai')) {
+    if (!isValidGoogleKey(API_KEY)) {
       console.error(
-        'VITE_OPENAI_API_KEY가 .env에 없습니다. 키 설정 후 다시 실행하거나 --extract-only를 사용하세요.',
+        'VITE_GOOGLE_API_KEY가 .env에 없습니다. 키 설정 후 다시 실행하거나 --extract-only를 사용하세요.',
       );
       process.exit(1);
     }

@@ -10,12 +10,12 @@ import {
 import {
   canUseModel,
   isFreeTierModel,
-  isOpenAIAvailable,
   isValidApiKey,
   loadLlmSettings,
   saveLlmSettings,
   subscribeLlmSettings,
 } from '@/lib/llm-settings';
+import { isEmbeddingAvailable } from '@/lib/embeddings';
 
 export function useLlmSettings() {
   const [selectedModelId, setSelectedModelId] = useState(
@@ -72,7 +72,7 @@ export function useLlmSettings() {
   }, []);
 
   const isChatReady = canUseSelectedModel;
-  const openAiAvailable = isOpenAIAvailable();
+  const embeddingAvailable = isEmbeddingAvailable();
 
   const providerStatus = useMemo(
     () =>
@@ -96,7 +96,7 @@ export function useLlmSettings() {
     canUseSelectedModel,
     isFreeTier,
     defaultModel: getDefaultChatModel(),
-    openAiAvailable,
+    embeddingAvailable,
     providerStatus,
   };
 }
