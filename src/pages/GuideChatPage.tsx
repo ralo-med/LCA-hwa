@@ -5,6 +5,7 @@ import {
   Loader2,
   MessageSquare,
   MessageSquareText,
+  Phone,
   PlusCircle,
   RotateCcw,
   Search,
@@ -12,7 +13,18 @@ import {
   Settings,
   Sparkles,
 } from "lucide-react";
+import { SUPPORT_HOTLINES } from "@/constants/site";
 import { ChatMarkdown } from "@/components/chat-markdown";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,25 +41,35 @@ import type { GuideSearchMode } from "@/types";
 
 const SUGGESTIONS = [
   "항암치료 부작용은 어떻게 관리하나요?",
-  "소세포폐암 치료 과정을 알려주세요.",
-  "전이성 폐암에서 일상생활 시 주의할 점은?",
-  "영양·식이 관리는 어떻게 해야 하나요?",
+  "진단을 받고 마음이 너무 불안해요.",
+  "먹어도 되는 음식과 피할 음식이 궁금해요.",
+  "가족으로서 어떻게 도와줄 수 있을까요?",
 ];
 
 const GUIDE_MODE_OPTIONS: {
   value: GuideSearchMode;
   label: string;
   icon: typeof Sparkles;
+  hint: string;
 }[] = [
-  { value: "auto", label: "자동", icon: Sparkles },
-  { value: "search", label: "가이드라인 검색", icon: Search },
-  { value: "chat", label: "대화만", icon: MessageSquareText },
+  {
+    value: "chat",
+    label: "편하게 얘기하기",
+    icon: MessageSquareText,
+    hint: "마음이 힘들 때 편하게 이야기 나눠요.",
+  },
+  {
+    value: "auto",
+    label: "정확한 의학 답변",
+    icon: Search,
+    hint: "치료·검사·부작용 등을 자료에 근거해 설명해요.",
+  },
 ];
 
 const INPUT_PLACEHOLDER: Record<GuideSearchMode, string> = {
-  auto: "메시지를 입력하세요. 필요하면 가이드라인을 찾아 답합니다.",
-  search: "가이드라인에서 찾아볼 질문을 입력하세요.",
-  chat: "자유롭게 대화해 보세요.",
+  auto: "궁금한 점을 편하게 입력해 보세요.",
+  search: "치료·검사 등 정확한 정보가 필요한 질문을 입력하세요.",
+  chat: "마음 편히 이야기해 보세요.",
 };
 
 const GuideChatPage = () => {
@@ -63,6 +85,7 @@ const GuideChatPage = () => {
   );
   const listRef = useRef<HTMLDivElement | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
 
   useEffect(() => {
     const el = listRef.current;
@@ -75,12 +98,17 @@ const GuideChatPage = () => {
     chat.send();
   };
 
+  const handleReset = () => {
+    chat.reset();
+    setResetOpen(false);
+  };
+
   const disabled =
     !llm.isChatReady || !chat.dataReady || chat.isChatting || !chat.input.trim();
 
   const loadingMessage =
     chat.loadingPhase === "searching"
-      ? "가이드라인을 찾는 중..."
+      ? "관련 자료를 찾는 중..."
       : "답변 작성 중...";
 
   return (
@@ -112,12 +140,53 @@ const GuideChatPage = () => {
           )}
         </div>
 
+        <div className="mb-4 space-y-1.5">
+          <div className="flex flex-wrap gap-1.5">
+            {GUIDE_MODE_OPTIONS.map(({ value, label, icon: Icon }) => (
+              <Button
+                key={value}
+                type="button"
+                variant={chat.guideMode === value ? "default" : "outline"}
+                size="sm"
+                className="gap-1.5"
+                onClick={() => chat.setGuideMode(value)}
+                disabled={chat.isChatting}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Button>
+            ))}
+          </div>
+          <p className="px-1 text-xs text-muted-foreground">
+            {GUIDE_MODE_OPTIONS.find((m) => m.value === chat.guideMode)?.hint ??
+              ""}
+          </p>
+        </div>
+
         <ModelSettingsDialog
           open={settingsOpen}
           onOpenChange={setSettingsOpen}
           settings={llm}
           disabled={chat.isChatting}
         />
+
+        <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>대화를 초기화할까요?</AlertDialogTitle>
+              <AlertDialogDescription>
+                지금까지 나눈 대화 내용이 모두 사라져요. 이 작업은 되돌릴 수
+                없습니다.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>취소</AlertDialogCancel>
+              <AlertDialogAction onClick={handleReset}>
+                초기화
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {chat.dataError && (
           <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -126,41 +195,13 @@ const GuideChatPage = () => {
         )}
 
         <Card className="flex min-h-0 flex-1 flex-col">
-          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-3">
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-primary">
                 <MessageSquare className="h-4 w-4" />
               </span>
               폐암 안내 도우미
             </CardTitle>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => setSettingsOpen(true)}
-                aria-label="AI 모델 설정"
-              >
-                <Settings className="h-4 w-4" />
-                설정
-                {!llm.isChatReady && (
-                  <span className="text-amber-600 dark:text-amber-400">!</span>
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={chat.reset}
-                disabled={chat.isChatting || chat.history.length === 0}
-                aria-label="채팅 초기화"
-              >
-                <RotateCcw className="h-4 w-4" />
-                초기화
-              </Button>
-            </div>
           </CardHeader>
 
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
@@ -187,8 +228,14 @@ const GuideChatPage = () => {
                           variant="outline"
                           size="sm"
                           className="h-auto min-h-[44px] whitespace-normal rounded-full px-4 py-2.5 text-left text-sm"
-                          disabled={!llm.isChatReady || !chat.dataReady}
-                          onClick={() => chat.setInput(q)}
+                          disabled={
+                            !llm.isChatReady ||
+                            !chat.dataReady ||
+                            chat.isChatting
+                          }
+                          onClick={() =>
+                            chat.send(q.replace(/^[^\p{L}]+/u, ""))
+                          }
                         >
                           {q}
                         </Button>
@@ -348,23 +395,6 @@ const GuideChatPage = () => {
               )}
             </div>
 
-            <div className="flex flex-wrap gap-1.5">
-              {GUIDE_MODE_OPTIONS.map(({ value, label, icon: Icon }) => (
-                <Button
-                  key={value}
-                  type="button"
-                  variant={chat.guideMode === value ? "default" : "outline"}
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => chat.setGuideMode(value)}
-                  disabled={chat.isChatting}
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Button>
-              ))}
-            </div>
-
             <form onSubmit={handleSubmit} className="flex gap-2">
               <Input
                 value={chat.input}
@@ -385,6 +415,63 @@ const GuideChatPage = () => {
             <p className="text-center text-xs text-muted-foreground">
               AI 보조 정보이며, 실제 진료는 담당 의료진과 상의하세요.
             </p>
+
+            <div className="flex items-center justify-center gap-1 text-muted-foreground">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-100"
+                onClick={() => setResetOpen(true)}
+                disabled={chat.isChatting || chat.history.length === 0}
+                aria-label="채팅 초기화"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                대화 초기화
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setSettingsOpen(true)}
+                aria-label="AI 모델 설정"
+              >
+                <Settings className="h-3.5 w-3.5" />
+                설정
+              </Button>
+            </div>
+
+            <details className="group rounded-xl border border-primary/20 bg-primary/5">
+              <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 text-sm marker:content-none [&::-webkit-details-marker]:hidden">
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                  <Phone className="h-3.5 w-3.5" />
+                </span>
+                <span className="font-medium text-foreground">
+                  마음이 힘드신가요? 언제든 이야기할 수 있어요
+                </span>
+                <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+              </summary>
+              <div className="grid gap-1.5 border-t border-primary/15 px-4 py-3 sm:grid-cols-2">
+                {SUPPORT_HOTLINES.map((h) => (
+                  <a
+                    key={h.tel}
+                    href={`tel:${h.tel.replace(/-/g, "")}`}
+                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-primary/10"
+                  >
+                    <Phone className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-foreground">
+                        {h.tel}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {h.name} · {h.note}
+                      </span>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </details>
           </CardContent>
         </Card>
       </div>

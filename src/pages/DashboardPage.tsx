@@ -34,26 +34,31 @@ const DashboardPage = () => {
     .join('\n');
 
   return (
-    <div className="bg-background text-foreground transition-colors print:bg-white">
-      <div className="mx-auto max-w-6xl p-4 md:p-8">
+    <div className="relative overflow-hidden bg-background text-foreground transition-colors print:bg-white">
+      <img
+        src="/images/clinical.png"
+        alt=""
+        aria-hidden
+        className="no-print pointer-events-none absolute -bottom-16 -right-16 w-144 max-w-none select-none opacity-[0.42] md:-bottom-24 md:-right-24 md:w-4xl"
+        style={{
+          WebkitMaskImage:
+            "linear-gradient(to top left, black 18%, transparent 78%)",
+          maskImage:
+            "linear-gradient(to top left, black 18%, transparent 78%)",
+        }}
+      />
+
+      <div className="relative mx-auto max-w-6xl p-4 md:p-8">
         <PrintHeader issueNumber={issueNumber} issuedAt={issuedAt} />
 
         <div className="no-print mb-6 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <img
-              src="/images/clinical.png"
-              alt=""
-              aria-hidden
-              className="hidden h-14 w-20 rounded-lg object-cover shadow-sm sm:block"
-            />
-            <div>
-              <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
-                생존 분석
-              </h1>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                환자 조건에 맞춘 공개 코호트 기반 추정
-              </p>
-            </div>
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
+              생존 분석
+            </h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              환자 조건에 맞춘 공개 코호트 기반 추정
+            </p>
           </div>
           <ShareButton
             payload={{ title: "폐암 생존 분석 결과", text: shareText }}

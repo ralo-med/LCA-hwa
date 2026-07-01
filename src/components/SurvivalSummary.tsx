@@ -214,6 +214,18 @@ const SurvivalSummary = ({
         </Card>
       </div>
 
+      {data && !noData && (
+        <div className="flex items-start gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+          <p>
+            이 수치는 비슷한 조건 환자{" "}
+            <span className="font-medium text-foreground">집단의 통계</span>
+            이며, 개인의 예후를 예측하지 않습니다. 실제 경과는 사람마다 다르니
+            반드시 담당 의료진과 상의하세요.
+          </p>
+        </div>
+      )}
+
       {data && noData && (
         <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />

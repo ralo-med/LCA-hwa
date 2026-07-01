@@ -90,6 +90,8 @@ const DAILY_LIVING_QUERY =
   /일상|생활|주의|조심|해야\s*할|일상생활|감염|위생|휴식|체력|정서|품질|daily\s*life|quality of life|lifestyle/i;
 const SUN_UV_QUERY =
   /자외선|선크림|햇빛|햇볕|sunscreen|\bUV\b|ultraviolet|sun\s*exposure/i;
+const EMOTIONAL_SUPPORT_QUERY =
+  /무섭|무서워|무서운|두렵|두려워|겁이\s*나|겁나|불안|초조|우울|눈물|울고|울어|울었|불면|잠\s*(이|도|을)?\s*(안|못)\s*(와|자|오)|잠이\s*오지|외롭|외로워|막막|답답|절망|무기력|허무|살고\s*싶|죽고\s*싶|죽을\s*것\s*같|끝난\s*것\s*같|충격|받아들이기\s*(힘|어려)|견디기\s*(힘|어려)|버티기\s*(힘|어려)|괴롭|괴로워|슬프|슬퍼|슬픔|공포|패닉|멘붕|힘들어|힘드네|지쳐|지친|서럽|막연|걱정돼|걱정이\s*(돼|되|많)/i;
 
 const MIN_CITATION_SIMILARITY = 0.5;
 const OFF_TOPIC_EXCERPT =
@@ -1293,13 +1295,33 @@ export function shouldSearchGuidelines(
   mode: GuideSearchMode,
   priorHistory: GuideChatMessage[] = [],
 ): boolean {
-  if (mode === "chat") return false;
   if (isOffTopicQuery(query)) return false;
   if (isChitchatQuery(query)) return false;
   if (mode === "search") return true;
 
   // auto: 잡담·관련 없는 주제만 제외하고 항상 가이드라인 검색
   if (mode === "auto") return true;
+
+  // chat(편하게 얘기하기): 감정·잡담은 자유 대화, 의학 정보 질문은 자료 근거로
+  // 답변해 환각/오답을 방지한다.
+  if (mode === "chat") {
+    if (MEDICAL_SIGNAL.test(query)) return true;
+    const lastUserChat = [...priorHistory]
+      .reverse()
+      .find((m) => m.role === "user");
+    if (
+      lastUserChat &&
+      query.length < 45 &&
+      MEDICAL_SIGNAL.test(lastUserChat.text)
+    ) {
+      return true;
+    }
+    const chatTopic = extractConversationTopic(priorHistory);
+    if (chatTopic && SUPPORTIVE_CARE_QUERY.test(chatTopic) && query.length < 50) {
+      return true;
+    }
+    return false;
+  }
 
   if (GUIDELINE_FOLLOWUP_QUERY.test(query)) return true;
   if (/다\s*검색|검색해\s*봐|찾아\s*봐|찾아\s*줘/i.test(query)) return true;
@@ -1581,6 +1603,47 @@ export function stripDefensiveClosing(text: string): string {
     .trim();
 }
 
+export function isEmotionalSupportQuery(query: string): boolean {
+  if (!EMOTIONAL_SUPPORT_QUERY.test(query)) return false;
+  // 순수 정보 질문에 감정어가 섞였을 때(예: "부작용 관리법 알려줘")는 제외하지 않되,
+  // 명백한 절차·수치 질문이면 일반 경로를 타도록 최소한만 배제
+  return true;
+}
+
+const EMOTIONAL_SUPPORT_GUIDE = `사용자가 지금 **두려움·불안·슬픔 등 힘든 마음**을 이야기하고 있습니다. 정보 나열보다 **마음을 먼저 살피는 것**이 가장 중요합니다.
+
+**답변 규칙 (순서 지키기)**
+1. **가장 먼저** 감정을 있는 그대로 알아주는 공감 2~3문장. ("그런 마음이 드는 건 정말 자연스러운 일이에요", "무섭고 잠이 안 오실 만큼 힘드셨겠어요" 처럼 진심이 느껴지게)
+2. 혼자가 아니라는 것, 이 감정이 이상한 게 아니라는 것을 짧게 짚어 주세요.
+3. 사용자가 구체적인 걱정(증상·치료·생활)을 함께 말했다면, 그때만 부드럽게 실천 팁 1~3가지를 이어서 안내합니다. 정보가 주가 되지 않게 합니다.
+4. 마지막에 마음이 계속 힘들면 상담 전화(국립암센터 1577-8899, 정신건강 1577-0199)나 담당 의료진과 이야기해 보길 **부드럽게** 권합니다.
+
+**말투·금지**
+- 따뜻한 대화체. 지시·강의 톤 금지, 진단·예후 단정 금지.
+- "~해야 합니다" 대신 "~해 보셔도 좋아요".
+- 목록을 억지로 만들지 말고, 필요할 때만 2~3개로 짧게.
+- 마크다운(**, #) 금지. 되묻기로 끝맺지 마세요.`;
+
+export function buildEmotionalSupportMessages(
+  question: string,
+  patientContext: GuidePatientContext,
+  priorHistory: GuideChatMessage[] = [],
+): LlmChatMessage[] {
+  return [
+    {
+      role: "system",
+      content: `${CHATBOT_PERSONA}
+
+${EMOTIONAL_SUPPORT_GUIDE}
+
+**현재 환자 정보 (대시보드)**
+${buildPatientContextBlock(patientContext)}`,
+    },
+    ...toChatHistory(priorHistory),
+    { role: "user", content: question },
+  ];
+}
+
 export function buildChitchatMessages(
   question: string,
   patientContext: GuidePatientContext,
@@ -1634,11 +1697,16 @@ ${buildPatientContextBlock(patientContext)}`,
   ];
 }
 
+const WARM_TONE_HINT = `\n\n**말투 (편하게 얘기하기 모드)**
+- 첫 문장은 짧은 공감·안심 한마디로 시작하세요. (예: "그 부분 걱정되실 수 있어요.")
+- 옆에서 이야기하듯 따뜻하고 부드러운 대화체로 설명하세요. 내용의 정확성은 그대로 지키되, 사실을 지어내지 마세요.`;
+
 export function buildGeneralMedicalMessages(
   question: string,
   patientContext: GuidePatientContext,
   priorHistory: GuideChatMessage[] = [],
   retrievalQuery?: string,
+  guideMode: GuideSearchMode = "auto",
 ): LlmChatMessage[] {
   const topic = extractConversationTopic(priorHistory);
   const contextHint =
@@ -1653,7 +1721,7 @@ export function buildGeneralMedicalMessages(
 - 질문의 핵심에 맞게 **4~6개 항목**으로 간결히 설명하세요.
 - NCCN·가이드라인·원문·발췌라는 말은 쓰지 마세요.
 - "관련이 없어", "찾지 못했" 같은 메타 설명으로 시작하지 마세요. 바로 본론부터 답하세요.
-- 폐암 환자·보호자 관점에서 실질적으로 도움이 되게 답하세요.
+- 폐암 환자·보호자 관점에서 실질적으로 도움이 되게 답하세요.${guideMode === "chat" ? WARM_TONE_HINT : ""}
 
 **현재 환자 정보 (대시보드)**
 ${buildPatientContextBlock(patientContext)}`,
@@ -1671,6 +1739,7 @@ export function buildRagMessages(
   patientContext: GuidePatientContext,
   citations: GuideChatSource[],
   priorHistory: GuideChatMessage[] = [],
+  guideMode: GuideSearchMode = "auto",
 ): LlmChatMessage[] {
   const sourceBlock = formatExcerptSources(citations);
 
@@ -1698,7 +1767,7 @@ export function buildRagMessages(
 - 환자에게 원문을 더 보내달라고 하지 마세요. 찾은 원문 범위에서 단계별로 최대한 구체적으로 설명하세요.
 - 원문 직역·### 제목·페이지 번호는 응답에 넣지 마세요. (원문은 UI에 별도 표시됩니다.)
 - "제목:", "(원문 근거: …)", "원문 내용은 아래처럼" 같은 **메타·중복 라벨 금지**. 한국어로만 간단히 설명하세요.
-- 목차 나열 금지.${lineHint}${followUpHint}`;
+- 목차 나열 금지.${lineHint}${followUpHint}${guideMode === "chat" ? WARM_TONE_HINT : ""}`;
 
   return [
     {
@@ -1953,6 +2022,21 @@ export async function planChatResponse(
     };
   }
 
+  if (isEmotionalSupportQuery(question)) {
+    return {
+      messages: buildEmotionalSupportMessages(
+        question,
+        patientContext,
+        priorHistory,
+      ),
+      citations: [],
+      searchedGuidelines: false,
+      retrievalQuery: question,
+      fromGuidelineRag: false,
+      fromSurvivalDashboard: false,
+    };
+  }
+
   const searchedGuidelines = shouldSearchGuidelines(
     question,
     guideMode,
@@ -2021,6 +2105,7 @@ export async function planChatResponse(
         patientContext,
         citations,
         priorHistory,
+        guideMode,
       ),
       citations,
       searchedGuidelines: true,
@@ -2052,6 +2137,7 @@ export async function planChatResponse(
       patientContext,
       priorHistory,
       retrievalQuery,
+      guideMode,
     ),
     citations: [],
     searchedGuidelines: true,

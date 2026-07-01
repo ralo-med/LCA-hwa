@@ -29,7 +29,7 @@ export function useGuideChat(
 ) {
   const [history, setHistory] = useState<GuideChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [guideMode, setGuideMode] = useState<GuideSearchMode>('auto');
+  const [guideMode, setGuideMode] = useState<GuideSearchMode>('chat');
   const [isChatting, setIsChatting] = useState(false);
   const [loadingPhase, setLoadingPhase] =
     useState<GuideChatLoadingPhase>('idle');
@@ -53,10 +53,11 @@ export function useGuideChat(
       });
   }, []);
 
-  const send = async () => {
-    if (!input.trim() || isChatting || !dataReady) return;
+  const send = async (overrideText?: string) => {
+    const source = overrideText ?? input;
+    if (!source.trim() || isChatting || !dataReady) return;
 
-    const userMsg = input.trim();
+    const userMsg = source.trim();
     const priorHistory = history;
 
     setInput('');
