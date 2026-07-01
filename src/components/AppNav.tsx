@@ -81,7 +81,7 @@ const AppNav = () => {
               className="h-11 w-11 shrink-0 object-contain md:h-12 md:w-12"
             />
             <div className="min-w-0">
-              <p className="text-sm font-bold tracking-tight text-foreground md:text-base">
+              <p className="font-display text-sm font-bold tracking-tight text-foreground md:text-base">
                 화순전남대학교병원
               </p>
               <p className="text-xs text-muted-foreground">

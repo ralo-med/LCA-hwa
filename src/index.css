@@ -39,75 +39,76 @@
 :root {
   --radius: 0.75rem;
 
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  /* 따뜻한 신뢰감: 딥틸 브랜드 + 웜 페이퍼 뉴트럴 */
+  --background: 40 33% 98%;
+  --foreground: 196 30% 13%;
 
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
+  --card-foreground: 196 30% 13%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
+  --popover-foreground: 196 30% 13%;
 
-  --primary: 142 76% 36%;
-  --primary-foreground: 355.7 100% 97.3%;
+  --primary: 176 55% 29%;
+  --primary-foreground: 40 33% 98%;
 
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 40 25% 94%;
+  --secondary-foreground: 196 30% 16%;
 
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted: 40 24% 94%;
+  --muted-foreground: 200 10% 41%;
 
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --accent: 168 40% 92%;
+  --accent-foreground: 176 55% 22%;
 
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 4 68% 50%;
+  --destructive-foreground: 40 33% 98%;
 
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 142 76% 36%;
+  --border: 40 20% 88%;
+  --input: 40 20% 88%;
+  --ring: 176 55% 29%;
 
-  --chart-1: 142 76% 36%;
-  --chart-2: 173 58% 39%;
-  --chart-3: 197 37% 24%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
+  --chart-1: 176 55% 32%;
+  --chart-2: 192 45% 42%;
+  --chart-3: 150 30% 42%;
+  --chart-4: 28 74% 55%;
+  --chart-5: 14 62% 55%;
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
+  --background: 196 30% 8%;
+  --foreground: 40 22% 92%;
 
-  --card: 222.2 84% 6.5%;
-  --card-foreground: 210 40% 98%;
+  --card: 196 27% 11%;
+  --card-foreground: 40 22% 92%;
 
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
+  --popover: 196 27% 11%;
+  --popover-foreground: 40 22% 92%;
 
-  --primary: 142.1 70.6% 45.3%;
-  --primary-foreground: 144.9 80.4% 10%;
+  --primary: 172 48% 46%;
+  --primary-foreground: 196 40% 8%;
 
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 196 20% 18%;
+  --secondary-foreground: 40 22% 92%;
 
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
+  --muted: 196 20% 16%;
+  --muted-foreground: 40 10% 64%;
 
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 176 30% 20%;
+  --accent-foreground: 168 45% 82%;
 
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 4 60% 42%;
+  --destructive-foreground: 40 22% 92%;
 
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 142.4 71.8% 29.2%;
+  --border: 196 18% 20%;
+  --input: 196 18% 20%;
+  --ring: 172 48% 46%;
 
-  --chart-1: 142.1 70.6% 45.3%;
-  --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
+  --chart-1: 172 48% 48%;
+  --chart-2: 192 50% 52%;
+  --chart-3: 150 35% 52%;
+  --chart-4: 28 72% 58%;
+  --chart-5: 14 62% 58%;
 }
 
 @layer base {
@@ -122,11 +123,12 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto,
-      'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    font-family: 'Pretendard Variable', Pretendard, system-ui, -apple-system,
+      'Apple SD Gothic Neo', 'Noto Sans KR', 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.01em;
+    word-break: keep-all;
   }
 }
 
@@ -145,4 +147,36 @@
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: hsl(var(--border));
   border-radius: 10px;
+}
+
+@layer utilities {
+  /* 에디토리얼 세리프 (제목용) */
+  .font-display {
+    font-family: 'Gowun Batang', 'Pretendard Variable', Pretendard, serif;
+    letter-spacing: -0.015em;
+  }
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+
+  /* 아주 미세한 종이 질감 — 평평한 AI-룩 탈피 */
+  .bg-grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.028;
+    mix-blend-mode: multiply;
+  }
+  .dark .bg-grain::before { mix-blend-mode: screen; opacity: 0.04; }
+
+  /* 은은한 상승 등장 */
+  .animate-rise {
+    animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
 }

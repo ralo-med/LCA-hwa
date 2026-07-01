@@ -18,7 +18,9 @@ export function InfoPageLayout({ title, children }: InfoPageLayoutProps) {
           홈으로
         </Link>
 
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{title}</h1>
+        <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">
+          {title}
+        </h1>
 
         <div className="mt-8 space-y-8 text-sm leading-relaxed text-foreground/90 md:text-base">
           {children}

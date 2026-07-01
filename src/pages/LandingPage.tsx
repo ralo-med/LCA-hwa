@@ -1,132 +1,119 @@
-import { ArrowRight, BookOpen, HeartHandshake, Stethoscope, User } from 'lucide-react';
+import { ArrowRight, HeartHandshake, Stethoscope } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-interface RoleCard {
+interface RoleItem {
   to: string;
-  icon: typeof User;
+  icon: typeof HeartHandshake;
   role: string;
-  title: string;
   description: string;
-  accent: 'patient' | 'guardian' | 'staff';
 }
 
-const ROLE_CARDS: RoleCard[] = [
-  {
-    to: '/guide-chat',
-    icon: User,
-    role: '저는 환자입니다',
-    title: '궁금한 점을 편하게 물어보세요',
-    description:
-      '내 상태에 맞춰 치료·부작용·일상생활을 쉽게 설명해 드려요. 어렵게 느껴지면 편하게 말 걸어 주세요.',
-    accent: 'patient',
-  },
+const ROLE_ITEMS: RoleItem[] = [
   {
     to: '/guide-chat',
     icon: HeartHandshake,
-    role: '저는 보호자입니다',
-    title: '가족을 돕기 위한 정보를 찾아보세요',
-    description:
-      '환자분을 어떻게 도우면 좋을지, 무엇을 준비하면 좋을지 함께 정리해 드려요.',
-    accent: 'guardian',
+    role: '환자·보호자',
+    description: '치료·부작용·일상을 쉽게 안내해 드려요.',
   },
   {
     to: '/dashboard',
     icon: Stethoscope,
-    role: '저는 의료진입니다',
-    title: '정밀의료 생존 분석 대시보드',
-    description:
-      '조직형·바이오마커별 Kaplan–Meier 생존 분석과 가이드라인 근거를 확인하세요.',
-    accent: 'staff',
+    role: '의료진',
+    description: '생존 분석 대시보드로 이동합니다.',
   },
 ];
 
-const ACCENT_CLASS: Record<RoleCard['accent'], string> = {
-  patient:
-    'border-primary/30 bg-primary/5 hover:border-primary hover:bg-primary/10',
-  guardian:
-    'border-sky-300/50 bg-sky-50/60 hover:border-sky-400 hover:bg-sky-100/70 dark:border-sky-900/50 dark:bg-sky-950/20 dark:hover:bg-sky-950/40',
-  staff:
-    'border-border bg-muted/40 hover:border-foreground/30 hover:bg-muted/70',
-};
-
-const ICON_CLASS: Record<RoleCard['accent'], string> = {
-  patient: 'bg-primary/15 text-primary',
-  guardian: 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300',
-  staff: 'bg-background text-foreground',
-};
-
 const LandingPage = () => {
   return (
-    <div className="bg-background text-foreground">
-      <div className="mx-auto max-w-4xl px-4 py-10 md:py-16">
-        <div className="text-center">
-          <img
-            src="/logo.png"
-            alt="화순전남대학교병원"
-            width={64}
-            height={64}
-            className="mx-auto h-16 w-16 object-contain"
-          />
-          <h1 className="mt-5 text-2xl font-bold tracking-tight md:text-4xl">
-            폐암 환자 케어 플랫폼
+    <div className="relative overflow-hidden bg-background text-foreground">
+      {/* 배경: 은은한 컬러 메시 + 종이 질감 */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-grain"
+      >
+        <div className="absolute -right-32 -top-40 h-[38rem] w-[38rem] rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-48 -left-24 h-[32rem] w-[32rem] rounded-full bg-chart-4/10 blur-3xl" />
+      </div>
+
+      <div className="mx-auto grid max-w-6xl gap-12 px-5 py-16 md:px-8 md:py-24 lg:grid-cols-12 lg:gap-16">
+        {/* 왼쪽: 에디토리얼 헤드라인 */}
+        <div className="animate-rise lg:col-span-6 lg:pt-6">
+          <div className="flex items-center gap-3">
+            <span className="h-px w-8 bg-primary/60" />
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              화순전남대학교병원 · 폐암 정밀의료
+            </span>
+          </div>
+
+          <h1 className="font-display mt-8 text-pretty text-5xl font-bold leading-[1.16] tracking-tight md:text-6xl lg:text-[4rem]">
+            혼자 걷지 않도록,
+            <br />
+            <span className="relative whitespace-nowrap text-primary">
+              곁에서 함께
+              <span
+                aria-hidden
+                className="absolute inset-x-0 -bottom-1 h-3 -rotate-1 bg-primary/12"
+              />
+            </span>
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            어떤 분이신가요? 아래에서 선택하시면 딱 맞는 화면으로 안내해
-            드릴게요.
+        </div>
+
+        {/* 오른쪽: 번호가 매겨진 역할 선택 리스트 */}
+        <div className="animate-rise lg:col-span-6 lg:pl-6" style={{ animationDelay: '0.08s' }}>
+          <p className="mb-2 text-sm font-medium text-muted-foreground">
+            어떤 분이신가요?
           </p>
-        </div>
-
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {ROLE_CARDS.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Link
-                key={card.role}
-                to={card.to}
-                className={`group flex min-h-[44px] flex-col rounded-2xl border-2 p-6 text-left transition-colors ${ACCENT_CLASS[card.accent]}`}
-              >
-                <span
-                  className={`inline-flex h-14 w-14 items-center justify-center rounded-xl ${ICON_CLASS[card.accent]}`}
+          <div>
+            {ROLE_ITEMS.map((item, idx) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.role}
+                  to={item.to}
+                  className="group relative flex items-center gap-5 border-t border-border/70 py-6 transition-colors last:border-b hover:bg-foreground/[0.025]"
                 >
-                  <Icon className="h-7 w-7" />
-                </span>
-                <h2 className="mt-5 text-lg font-bold md:text-xl">
-                  {card.role}
-                </h2>
-                <p className="mt-1 text-base font-medium text-foreground/90">
-                  {card.title}
-                </p>
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
-                  {card.description}
-                </p>
-                <span className="mt-5 inline-flex items-center gap-1.5 text-base font-semibold text-primary">
-                  시작하기
-                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+                  <span
+                    aria-hidden
+                    className="absolute left-0 top-1/2 h-0 w-0.5 -translate-y-1/2 bg-primary transition-all duration-300 group-hover:h-10"
+                  />
+                  <span className="font-display w-8 text-2xl tabular-nums text-muted-foreground/45">
+                    {String(idx + 1).padStart(2, '0')}
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="flex items-center gap-2 text-lg font-bold">
+                      <Icon className="h-5 w-5 text-primary" />
+                      {item.role}
+                    </span>
+                    <span className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      {item.description}
+                    </span>
+                  </span>
+                  <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground/50 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary" />
+                </Link>
+              );
+            })}
+          </div>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-center">
-          <Link
-            to="/guides"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <BookOpen className="h-4 w-4" />
-            가이드라인 PDF 보기
-          </Link>
-          <Link
-            to="/about"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            서비스 소개
-          </Link>
+          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <Link
+              to="/guides"
+              className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+            >
+              가이드라인 PDF 보기
+            </Link>
+            <Link
+              to="/about"
+              className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+            >
+              서비스 소개
+            </Link>
+          </div>
         </div>
+      </div>
 
-        <p className="mx-auto mt-10 max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
-          본 플랫폼의 모든 정보는 AI 정밀의료 보조 자료이며, 실제 진료 계획은
-          담당 전문의의 소견을 우선합니다.
+      <div className="mx-auto max-w-6xl px-5 pb-12 md:px-8">
+        <p className="border-t border-border/60 pt-6 text-xs text-muted-foreground/80">
+          AI 보조 정보이며, 실제 진료는 담당 전문의와 상의하세요.
         </p>
       </div>
     </div>

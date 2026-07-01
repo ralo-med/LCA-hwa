@@ -62,11 +62,13 @@ const GuideChatPage = () => {
     },
     llm.selectedModelId,
   );
-  const endRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = listRef.current;
+    if (!el || chat.history.length === 0) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [chat.history, chat.isChatting]);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -177,7 +179,10 @@ const GuideChatPage = () => {
           </CardHeader>
 
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
-            <div className="custom-scrollbar min-h-[min(28rem,55vh)] flex-1 space-y-4 overflow-y-auto rounded-lg border bg-muted/30 p-4">
+            <div
+              ref={listRef}
+              className="custom-scrollbar min-h-[min(28rem,55vh)] flex-1 space-y-4 overflow-y-auto rounded-lg border bg-muted/30 p-4"
+            >
               {chat.history.length === 0 && (
                 <div className="flex min-h-[min(24rem,48vh)] flex-col items-center justify-center gap-5 text-center">
                   <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary">
@@ -362,7 +367,6 @@ const GuideChatPage = () => {
                   {loadingMessage}
                 </div>
               )}
-              <div ref={endRef} />
             </div>
 
             <div className="flex flex-wrap gap-1.5">
