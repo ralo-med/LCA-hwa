@@ -42,22 +42,24 @@ const PatientProfilePage = () => {
           홈으로
         </Link>
 
-        <div className="flex items-center gap-4">
-          <span className="h-px w-8 bg-primary/60" />
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            환자·보호자
-          </span>
+        <div className="animate-rise-delay-1">
+          <div className="flex items-center gap-4">
+            <span className="h-px w-8 bg-primary/60" />
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              환자·보호자
+            </span>
+          </div>
+
+          <h1 className="font-display mt-4 text-3xl font-bold tracking-tight md:text-4xl">
+            내 암 정보
+          </h1>
+          <p className="mt-3 text-pretty text-base text-muted-foreground">
+            아는 정보만 입력해 주세요. 모르는 항목은 비워두거나 건너뛰셔도
+            챗봇을 이용할 수 있습니다.
+          </p>
         </div>
 
-        <h1 className="font-display mt-4 text-3xl font-bold tracking-tight md:text-4xl">
-          내 암 정보
-        </h1>
-        <p className="mt-3 text-pretty text-base text-muted-foreground">
-          아는 정보만 입력해 주세요. 모르는 항목은 비워두거나 건너뛰셔도
-          챗봇을 이용할 수 있습니다.
-        </p>
-
-        <Card className="mt-8 border-border/60 shadow-sm">
+        <Card className="animate-rise-delay-2 mt-8 border-border/60 shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="text-base">진단·검사 정보</CardTitle>
           </CardHeader>
@@ -73,7 +75,7 @@ const PatientProfilePage = () => {
           </CardContent>
         </Card>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <div className="animate-rise-delay-2 mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="outline"

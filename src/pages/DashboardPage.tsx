@@ -55,7 +55,7 @@ const DashboardPage = () => {
       <div className="relative mx-auto max-w-6xl p-4 md:p-8">
         <PrintHeader issueNumber={issueNumber} issuedAt={issuedAt} />
 
-        <div className="no-print mb-6 flex items-center justify-between gap-4">
+        <div className="no-print animate-rise-delay-1 mb-6 flex items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
               생존 분석

@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import AppNav from '@/components/AppNav';
 import Footer from '@/components/Footer';
+import { PageTransitionLayout } from '@/components/PageTransitionLayout';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
 import DashboardPage from '@/pages/DashboardPage';
@@ -37,15 +38,17 @@ const App = () => {
       <BrowserRouter>
         <div className="flex min-h-screen flex-col">
           <AppNav />
-          <main className="flex-1">
+          <main className="flex min-h-0 flex-1 flex-col">
             <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/profile" element={<PatientProfilePage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/guide-chat" element={<GuideChatPage />} />
-              <Route path="/guides" element={<GuidePdfsPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/contact" element={<ContactPage />} />
+              <Route element={<PageTransitionLayout />}>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/profile" element={<PatientProfilePage />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/guide-chat" element={<GuideChatPage />} />
+                <Route path="/guides" element={<GuidePdfsPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+              </Route>
             </Routes>
           </main>
           <Footer />
