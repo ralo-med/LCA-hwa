@@ -3,6 +3,7 @@ import {
   ExternalLink,
   FileText,
   LayoutDashboard,
+  ListPlus,
   Stethoscope,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -53,6 +54,13 @@ const NAV_ITEMS: NavItem[] = [
     icon: FileText,
   },
   {
+    kind: "internal",
+    to: "/care",
+    label: "추가 기능",
+    shortLabel: "추가",
+    icon: ListPlus,
+  },
+  {
     kind: "external",
     href: DOCTORS_URL,
     label: "폐암 의료진",
@@ -73,11 +81,15 @@ const linkClass = (isActive: boolean, disabled?: boolean) =>
 const AppNav = () => {
   return (
     <header className="no-print relative shrink-0 border-b bg-card pt-[env(safe-area-inset-top,0px)]">
+      <div className="absolute right-4 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-10 sm:hidden md:right-8">
+        <ThemeToggle />
+      </div>
+
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 md:px-8 md:py-5">
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-4">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-4">
           <NavLink
             to="/"
-            className="flex min-w-0 items-center gap-3 rounded-lg transition-opacity hover:opacity-90"
+            className="flex min-w-0 items-center gap-3 overflow-hidden rounded-lg pr-11 transition-opacity hover:opacity-90 sm:pr-0"
           >
             <img
               src="/logo.png"
@@ -87,17 +99,19 @@ const AppNav = () => {
               className="h-11 w-11 shrink-0 object-contain md:h-12 md:w-12"
             />
             <div className="min-w-0">
-              <p className="text-pretty font-display text-sm font-bold leading-snug tracking-tight text-foreground md:text-base">
+              <p className="truncate font-display text-sm font-bold leading-snug tracking-tight whitespace-nowrap text-foreground md:text-base">
                 화순전남대학교병원
               </p>
-              <p className="text-pretty text-xs leading-snug text-muted-foreground">
+              <p className="truncate text-xs leading-snug whitespace-nowrap text-muted-foreground">
                 폐암 환자 케어 플랫폼
               </p>
             </div>
           </NavLink>
-          <div className="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-end">
+          <div className="flex w-full min-w-0 flex-nowrap items-center justify-center sm:w-auto sm:shrink-0 sm:justify-end sm:gap-2">
             <FontScaleControl />
-            <ThemeToggle />
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
 

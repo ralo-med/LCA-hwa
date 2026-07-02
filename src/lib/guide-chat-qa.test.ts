@@ -7,6 +7,7 @@ import { DEFAULT_CHAT_MODEL_ID } from '@/lib/llm-models';
 import { canUseModel } from '@/lib/llm-settings';
 import { DEFAULT_PATIENT_PROFILE } from '@/lib/patient-profile';
 import {
+  filterRelevantCitations,
   isDrugCatalogOrMonographText,
   isEmotionalSupportQuery,
   isSurvivalDashboardQuery,
@@ -20,7 +21,8 @@ import type { GuideSearchMode } from '@/types';
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const chunksJson = fs.readFileSync(
   path.join(ROOT, 'public/data/guide-chunks.json'),
-  'utf8');
+  'utf8',
+);
 
 const ctx: GuidePatientContext = { profile: DEFAULT_PATIENT_PROFILE };
 
@@ -36,13 +38,14 @@ interface QCase {
     minCites?: number;
     citeFile?: RegExp;
     forbidCitePages?: number[];
+    requireExcerpt?: RegExp;
     forbidExcerpt?: RegExp;
     forbidAnswer?: RegExp;
     requireAnswer?: RegExp;
   };
 }
 
-/** UI 추천 질문 + 회귀 케이스 */
+/** UI 추천 질문 + auto 모드 + 회귀 케이스 */
 const CASES: QCase[] = [
   {
     id: 'suggest-side-effects',
@@ -51,7 +54,9 @@ const CASES: QCase[] = [
     expect: {
       route: 'rag',
       minCites: 1,
-      forbidExcerpt: /어떤\s*약제인가요|아트로핀|유지요법|치료\s*이득|Q\s*9[3-4]/i,
+      forbidCitePages: [115, 128],
+      requireExcerpt: /Q\s*109|일반적\s*주의|오심|구토|설사|감염|부작용/i,
+      forbidExcerpt: /어떤\s*약제인가요|아트로핀|유지요법|치료\s*이득|Q\s*9[3-4]|EGFR\s*억제|항암화학치료제의\s*종류/i,
       forbidAnswer: /이리노테칸|아트로핀|유지요법|치료\s*이득과\s*독성|표적치료제는\s*부작용이\s*적/i,
       requireAnswer: /부작용|오심|구토|감염|병원|알려주/i,
     },
@@ -63,7 +68,9 @@ const CASES: QCase[] = [
     expect: {
       route: 'rag',
       minCites: 1,
-      forbidExcerpt: /유지요법|치료\s*이득|독성이\s*항암|몇\s*번\s*하나요|Q\s*9[3-4]/i,
+      forbidCitePages: [115, 128],
+      requireExcerpt: /Q\s*109|오심|구토|설사|탈모|피로|감염|부작용/i,
+      forbidExcerpt: /유지요법|치료\s*이득|독성이\s*항암|몇\s*번\s*하나요|Q\s*9[3-4]|EGFR\s*억제|어떤\s*약제인가요/i,
       forbidAnswer: /유지요법|치료\s*이득과\s*독성|표적치료제는\s*부작용이\s*적/i,
       requireAnswer: /오심|구토|설사|탈모|피로|감염|백혈구|빈혈/i,
     },
@@ -75,14 +82,21 @@ const CASES: QCase[] = [
     expect: {
       route: 'rag',
       minCites: 1,
-      forbidExcerpt: /유지요법|치료\s*이득|Q\s*9[3-4]/i,
+      forbidCitePages: [115],
+      requireExcerpt: /부작용|오심|구토|설사|Q\s*109/i,
+      forbidExcerpt: /유지요법|치료\s*이득|Q\s*9[3-4]|어떤\s*약제인가요/i,
     },
   },
   {
     id: 'suggest-anxiety',
     question: '진단을 받고 마음이 너무 불안해요.',
     mode: 'chat',
-    expect: { route: 'emotional', searchGuidelines: false },
+    expect: {
+      route: 'emotional',
+      searchGuidelines: false,
+      requireAnswer: /자연|힘든|불안|괜찮|이해|감정|마음/i,
+      forbidAnswer: /NCCN|가이드라인\s*원문|PD-L1|EGFR/i,
+    },
   },
   {
     id: 'suggest-nutrition',
@@ -91,8 +105,11 @@ const CASES: QCase[] = [
     expect: {
       route: 'rag',
       minCites: 1,
-      forbidCitePages: [38, 130, 132],
-      forbidExcerpt: /석면|ALK|면역관문|Contents\b|NCCN Foundation gratefully/i,
+      forbidCitePages: [38, 104, 115, 130, 132, 135, 136],
+      requireExcerpt: /식단|식사|음식|영양|Q\s*13[6-9]|섭취|체중/i,
+      forbidExcerpt: /석면|ALK|면역관문|EGFR|Q\s*109|Q\s*110|수술\s*후\s*일상|Contents\b/i,
+      requireAnswer: /음식|식사|식단|영양|섭취|체중/i,
+      forbidAnswer: /석면|ALK|면역관문|PD-L1/i,
     },
   },
   {
@@ -100,8 +117,12 @@ const CASES: QCase[] = [
     question: '가족으로서 어떻게 도와줄 수 있을까요?',
     mode: 'chat',
     expect: {
-      route: 'general',
+      route: 'rag',
       searchGuidelines: true,
+      minCites: 1,
+      requireExcerpt: /가족|보호|호스피스|완화|돌봄|정서|Q\s*14[56]|caregiver|patient and caregiver/i,
+      requireAnswer: /가족|보호|함께|돌봄|정서|지지|호스피스|완화/i,
+      forbidAnswer: /PD-L1|EGFR|ALK|표적\s*치료/i,
     },
   },
   {
@@ -111,7 +132,10 @@ const CASES: QCase[] = [
     expect: {
       route: 'rag',
       minCites: 1,
-      forbidExcerpt: /Presented with support|NCCN\.org\/patientguidelines/i,
+      forbidCitePages: [129, 133, 162],
+      requireExcerpt: /소세포|치료|Q\s*68|항암|화학|방사|Initial treatment|Limited.?stage|Extensive.?stage/i,
+      forbidExcerpt: /Presented with support|NCCN\.org\/patientguidelines|생존\s*기간|5년\s*생존|키트루다|Q\s*62|Q\s*28\b|가슴에\s*미세한\s*통증/i,
+      requireAnswer: /소세포|치료|항암|화학|방사/i,
     },
   },
   {
@@ -121,7 +145,10 @@ const CASES: QCase[] = [
     expect: {
       route: 'rag',
       minCites: 1,
-      forbidExcerpt: /cause of concerning symptoms/i,
+      forbidCitePages: [75, 84, 87],
+      requireExcerpt: /일상|생활|감염|운동|금연|휴식|삶의\s*질|supportive|quality of life/i,
+      forbidExcerpt: /cause of concerning symptoms|해외\s*여행|입원.*며칠|수술\s*부작용/i,
+      requireAnswer: /일상|생활|감염|휴식|운동|금연|주의/i,
     },
   },
   {
@@ -131,7 +158,10 @@ const CASES: QCase[] = [
     expect: {
       route: 'rag',
       minCites: 1,
-      forbidExcerpt: /registered dietitian/i,
+      forbidCitePages: [104, 135, 136, 137],
+      requireExcerpt: /영양|식이|식단|식사|음식|Q\s*13[6-9]|healthful|healthy living|섭취/i,
+      forbidExcerpt: /registered dietitian|Q\s*109|수술\s*후\s*일상|감염\s*의심|과립구|백혈구\s*성장|Q\s*110\b/i,
+      requireAnswer: /영양|식이|식단|식사|음식|체중/i,
     },
   },
   {
@@ -141,6 +171,7 @@ const CASES: QCase[] = [
     expect: {
       route: 'rag',
       minCites: 1,
+      requireExcerpt: /이리노|설사|구토|부작용/i,
       requireAnswer: /설사|이리노|구토|오심/i,
     },
   },
@@ -148,13 +179,22 @@ const CASES: QCase[] = [
     id: 'survival-rate',
     question: '제 5년 생존율은 얼마나 되나요?',
     mode: 'chat',
-    expect: { route: 'survival', searchGuidelines: false },
+    expect: {
+      route: 'survival',
+      searchGuidelines: false,
+      requireAnswer: /5\s*년|생존|%|연/i,
+      forbidAnswer: /가이드라인\s*원문|NCCN\s*PDF/i,
+    },
   },
   {
     id: 'chitchat-greeting',
     question: '안녕하세요',
     mode: 'chat',
-    expect: { route: 'chitchat', searchGuidelines: false },
+    expect: {
+      route: 'chitchat',
+      searchGuidelines: false,
+      requireAnswer: /안녕|도우미|폐암|도와/i,
+    },
   },
 ];
 
@@ -167,6 +207,58 @@ function resolveRoute(plan: Awaited<ReturnType<typeof planChatResponse>>): Expec
     return 'chitchat';
   }
   return 'general';
+}
+
+function assertCitationQuality(
+  item: QCase,
+  plan: Awaited<ReturnType<typeof planChatResponse>>,
+  route: ExpectedRoute,
+) {
+  const citations = filterRelevantCitations(
+    plan.citations,
+    plan.retrievalQuery,
+  );
+
+  if (item.expect.minCites != null && route === 'rag') {
+    expect(citations.length).toBeGreaterThanOrEqual(item.expect.minCites);
+  }
+
+  if (item.expect.citeFile) {
+    expect(
+      citations.some(
+        (c) =>
+          item.expect.citeFile!.test(c.fileName) ||
+          item.expect.citeFile!.test(c.docTitle),
+      ),
+    ).toBe(true);
+  }
+
+  for (const page of item.expect.forbidCitePages ?? []) {
+    expect(citations.some((c) => c.page === page)).toBe(false);
+  }
+
+  if (item.expect.requireExcerpt && route === 'rag') {
+    expect(
+      citations.some((c) => item.expect.requireExcerpt!.test(c.excerpt)),
+    ).toBe(true);
+  }
+
+  if (item.expect.forbidExcerpt) {
+    for (const c of citations) {
+      expect(c.excerpt).not.toMatch(item.expect.forbidExcerpt!);
+    }
+  }
+
+  if (
+    route === 'rag' &&
+    isGeneralSideEffectCase(item.question) &&
+    citations.length > 0
+  ) {
+    for (const c of citations) {
+      expect(isDrugCatalogOrMonographText(c.excerpt)).toBe(false);
+      expect(isTreatmentProgramText(c.excerpt)).toBe(false);
+    }
+  }
 }
 
 beforeAll(() => {
@@ -214,43 +306,16 @@ describe('guide chat QA — plan & citations', () => {
     expect(route).toBe(item.expect.route);
 
     if (process.env.DEBUG_QA === '1') {
-      console.log(item.id, route, plan.citations.map((c) => `p${c.page}`));
+      const cites = filterRelevantCitations(plan.citations, plan.retrievalQuery);
+      console.log(
+        item.id,
+        route,
+        cites.map((c) => `p${c.page}`),
+        cites[0]?.excerpt.slice(0, 80),
+      );
     }
 
-    if (item.expect.minCites != null && route === 'rag') {
-      expect(plan.citations.length).toBeGreaterThanOrEqual(item.expect.minCites);
-    }
-
-    if (item.expect.citeFile) {
-      expect(
-        plan.citations.some(
-          (c) =>
-            item.expect.citeFile!.test(c.fileName) ||
-            item.expect.citeFile!.test(c.docTitle),
-        ),
-      ).toBe(true);
-    }
-
-    for (const page of item.expect.forbidCitePages ?? []) {
-      expect(plan.citations.some((c) => c.page === page)).toBe(false);
-    }
-
-    if (item.expect.forbidExcerpt) {
-      for (const c of plan.citations) {
-        expect(c.excerpt).not.toMatch(item.expect.forbidExcerpt!);
-      }
-    }
-
-    if (
-      route === 'rag' &&
-      isGeneralSideEffectCase(item.question) &&
-      plan.citations.length > 0
-    ) {
-      for (const c of plan.citations) {
-        expect(isDrugCatalogOrMonographText(c.excerpt)).toBe(false);
-        expect(isTreatmentProgramText(c.excerpt)).toBe(false);
-      }
-    }
+    assertCitationQuality(item, plan, route);
   }, 30_000);
 });
 
@@ -282,11 +347,16 @@ describe('guide chat QA — conversation follow-up', () => {
       'chat',
     );
     expect(plan.fromGuidelineRag).toBe(true);
-    for (const c of plan.citations) {
+    const citations = filterRelevantCitations(
+      plan.citations,
+      plan.retrievalQuery,
+    );
+    for (const c of citations) {
       expect(isTreatmentProgramText(c.excerpt)).toBe(false);
       expect(c.page).not.toBe(113);
       expect(c.page).not.toBe(114);
       expect(c.page).not.toBe(119);
+      expect(c.page).not.toBe(115);
     }
   }, 30_000);
 });
@@ -303,36 +373,36 @@ function isGeneralSideEffectCase(question: string): boolean {
 const llmReady = canUseModel(DEFAULT_CHAT_MODEL_ID);
 
 describe.skipIf(!llmReady)('guide chat QA — LLM answers', () => {
-  it.each(
-    CASES.filter(
-      (c) => c.expect.forbidAnswer || c.expect.requireAnswer,
-    ),
-  )('$id — answer content', async (item) => {
-    const mode = item.mode ?? 'chat';
-    const plan = await planChatResponse(item.question, ctx, [], mode);
+  it.each(CASES.filter((c) => c.expect.requireAnswer || c.expect.forbidAnswer))(
+    '$id — answer content',
+    async (item) => {
+      const mode = item.mode ?? 'chat';
+      const plan = await planChatResponse(item.question, ctx, [], mode);
 
-    let answer: string;
-    try {
-      answer = stripDefensiveClosing(
-        await callLlmChat(plan.messages, DEFAULT_CHAT_MODEL_ID, {
-          maxTokens: 700,
-          retries: 2,
-        }),
-      );
-    } catch (err) {
-      if (err instanceof LlmNotConfiguredError) return;
-      throw err;
-    }
+      let answer: string;
+      try {
+        answer = stripDefensiveClosing(
+          await callLlmChat(plan.messages, DEFAULT_CHAT_MODEL_ID, {
+            maxTokens: 700,
+            retries: 2,
+          }),
+        );
+      } catch (err) {
+        if (err instanceof LlmNotConfiguredError) return;
+        throw err;
+      }
 
-    expect(answer.length).toBeGreaterThan(20);
+      expect(answer.length).toBeGreaterThan(20);
 
-    if (item.expect.forbidAnswer) {
-      expect(answer).not.toMatch(item.expect.forbidAnswer!);
-    }
-    if (item.expect.requireAnswer) {
-      expect(answer).toMatch(item.expect.requireAnswer!);
-    }
-  }, 60_000);
+      if (item.expect.forbidAnswer) {
+        expect(answer).not.toMatch(item.expect.forbidAnswer!);
+      }
+      if (item.expect.requireAnswer) {
+        expect(answer).toMatch(item.expect.requireAnswer!);
+      }
+    },
+    60_000,
+  );
 });
 
 describe('guide chat QA — routing helpers', () => {

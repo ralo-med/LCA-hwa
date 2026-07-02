@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import { PageTransitionLayout } from '@/components/PageTransitionLayout';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
+import PatientCarePage from '@/pages/PatientCarePage';
 import DashboardPage from '@/pages/DashboardPage';
 import LandingPage from '@/pages/LandingPage';
 import GuideChatPage from '@/pages/GuideChatPage';
@@ -48,6 +49,7 @@ const App = () => {
                 <Route path="/guides" element={<GuidePdfsPage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/contact" element={<ContactPage />} />
+                <Route path="/care" element={<PatientCarePage />} />
               </Route>
             </Routes>
           </main>

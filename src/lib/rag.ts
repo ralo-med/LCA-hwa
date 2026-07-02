@@ -172,7 +172,7 @@ const DRUG_CATALOG_TEXT =
 
 /** 주제별 본문 신호 — 한글·영문 통합 (bare `식이` 등 부분 일치 오탐 방지) */
 const NUTRITION_TOPIC_TEXT =
-  /영양\s*관리|식이\s*요법|식단|식사|음식|체중\s*관리|체중\s*유지|균형\s*잡힌|단백질|섭취|도움이\s*되는\s*식단|식사에\s*주의|먹어야\s*하는\s*음식|금연.*음식|야채|채소|과일|healthful foods|healthy living|Common goals for healthy living|managing body weight|Eating healthful/i;
+  /영양\s*관리|식이\s*요법|식단|식사에\s*주의|체중\s*관리|체중\s*유지|균형\s*잡힌|단백질|섭취|도움이\s*되는\s*식단|먹어야\s*하는\s*음식|금연.*음식|야채|채소|과일|healthful foods|healthy living|Common goals for healthy living|managing body weight|Eating healthful/i;
 const NUTRITION_QA_MARKER =
   /Q\s*13[6-9]\b|폐암\s*환자에게\s*도움이\s*되는\s*식단|항암치료\s*중\s*식사|방사선\s*치료.*식이/i;
 const BIOMARKER_TOPIC_TEXT =
@@ -184,11 +184,21 @@ const DAILY_LIVING_TOPIC_TEXT =
 const TREATMENT_TOPIC_TEXT =
   /Surgery is a standard|Treating lung cancer with surgery|lobectomy|pneumonectomy|definitive chemoradiation|수술적\s*치료|수술\s*치료|폐엽\s*절제|폐엽절제|쐐기\s*절제|radiation|chemotherapy|chemoradiation|방사선\s*치료|항암\s*화학|화학\s*요법|동시항암방사선/i;
 const SCLC_TREATMENT_TOPIC_TEXT =
-  /Initial treatment|Limited.?stage|Extensive.?stage|chemoradiation|chemoimmunotherapy|platinum|durvalumab|초기\s*치료|1차\s*치료|제한\s*병기|확장\s*병기|동시항암방사선|소세포/i;
+  /Initial treatment|Limited.?stage|Extensive.?stage|chemoradiation|chemoimmunotherapy|platinum|durvalumab|제한\s*병기|확장\s*병기|동시항암방사선|Q\s*68\b|소세포암.*치료|소세포암은\s*항암|소세포암,\s*어떻게/i;
 const SUN_UV_TOPIC_TEXT =
   /sunscreen|sun exposure|ultraviolet|자외선|햇볕|선크림|Common goals for healthy living/i;
+const CAREGIVER_TOPIC_TEXT =
+  /호스피스|완화\s*의료|가족|보호자|caregiver|돌봄|간병|정서\s*지원|Q\s*145|Q\s*146/i;
 
 function isNutritionTopicText(text: string): boolean {
+  if (
+    /Q\s*85\b|수술\s*후\s*일상|Q\s*109\b|Q\s*110\b|설사가\s*심합니다|감염\s*의심|과립구집락|백혈구\s*성장/.test(
+      text,
+    ) &&
+    !/Q\s*13[6-9]|식단|영양\s*관리|식사에\s*주의|도움이\s*되는\s*식단/.test(text)
+  ) {
+    return false;
+  }
   return NUTRITION_TOPIC_TEXT.test(text) || NUTRITION_QA_MARKER.test(text);
 }
 
@@ -212,6 +222,10 @@ function isSclcTreatmentTopicText(text: string): boolean {
   return SCLC_TREATMENT_TOPIC_TEXT.test(text);
 }
 
+function isCaregiverTopicText(text: string): boolean {
+  return CAREGIVER_TOPIC_TEXT.test(text);
+}
+
 function hasTopicAnchor(query: string): boolean {
   return (
     NUTRITION_QUERY.test(query) ||
@@ -220,6 +234,7 @@ function hasTopicAnchor(query: string): boolean {
     TREATMENT_METHOD_QUERY.test(query) ||
     DAILY_LIVING_QUERY.test(query) ||
     SUN_UV_QUERY.test(query) ||
+    CAREGIVER_QUERY.test(query) ||
     (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) ||
     SCLC_QUERY.test(query) ||
     METASTATIC_QUERY.test(query) ||
@@ -232,7 +247,9 @@ function hasTopicAnchor(query: string): boolean {
 function excerptHasTopicAnchor(query: string, excerpt: string): boolean {
   if (NUTRITION_QUERY.test(query)) return isNutritionTopicText(excerpt);
   if (BIOMARKER_QUERY.test(query)) return isBiomarkerTopicText(excerpt);
+  if (CAREGIVER_QUERY.test(query)) return isCaregiverTopicText(excerpt);
   if (isGeneralSideEffectManagementQuery(query)) {
+    if (isTargetedTherapySideEffectText(excerpt)) return false;
     return (
       GENERAL_CHEMO_SIDE_EFFECT_CARE_TEXT.test(excerpt) ||
       (/부작용이\s*흔히|탈모.*구역|구토.*설사/i.test(excerpt) &&
@@ -245,6 +262,7 @@ function excerptHasTopicAnchor(query: string, excerpt: string): boolean {
     return isSupportiveCareTopicText(excerpt);
   }
   if (DAILY_LIVING_QUERY.test(query)) return isDailyLivingTopicText(excerpt);
+  if (CAREGIVER_QUERY.test(query)) return isCaregiverTopicText(excerpt);
   if (SUN_UV_QUERY.test(query)) return SUN_UV_TOPIC_TEXT.test(excerpt);
   if (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) {
     return isSclcTreatmentTopicText(excerpt);
@@ -301,6 +319,13 @@ export function isDrugMonographText(text: string): boolean {
 export function isDrugCatalogOrMonographText(text: string): boolean {
   if (isDrugMonographText(text)) return true;
   if (!DRUG_CATALOG_TEXT.test(text)) return false;
+  if (
+    /Q\s*9[0-9]\b|항암화학치료제의\s*종류|세포독성\s*항암제와\s*표적/i.test(
+      text,
+    )
+  ) {
+    return true;
+  }
   if (/부작용이\s*흔히\s*발생|탈모,\s*구역,\s*구토/i.test(text)) return false;
   return /세포독성\s*항암|표적\s*항암|정맥주사로\s*투여/i.test(text);
 }
@@ -308,6 +333,97 @@ export function isDrugCatalogOrMonographText(text: string): boolean {
 /** 치료 시행 기준·유지요법·투약 주기 등 — 부작용 질문과 맞지 않음 */
 export function isTreatmentProgramText(text: string): boolean {
   return TREATMENT_PROGRAM_TEXT.test(text);
+}
+
+const TARGETED_THERAPY_SIDE_EFFECT_TEXT =
+  /EGFR\s*억제|ALK\s*억제|ROS1\s*억제|표적\s*항암.*부작용|표적치료제.*부작용|티로신\s*키나제/i;
+
+function isTargetedTherapySideEffectText(text: string): boolean {
+  return TARGETED_THERAPY_SIDE_EFFECT_TEXT.test(text);
+}
+
+/** 검색·인용 단계에서 주제와 맞지 않는 페이지/발췌 제거 */
+function shouldRejectCitationSource(
+  query: string,
+  pageText: string,
+  excerpt: string,
+): boolean {
+  const text = `${pageText}\n${excerpt}`;
+
+  if (
+    isGeneralSideEffectManagementQuery(query) &&
+    !queryMentionsSpecificDrug(query)
+  ) {
+    if (isDrugCatalogOrMonographText(text)) return true;
+    if (isTreatmentProgramText(text)) return true;
+    if (isTargetedTherapySideEffectText(text)) return true;
+  }
+
+  if (NUTRITION_QUERY.test(query)) {
+    if (/Q\s*110\b/.test(pageText)) return true;
+    if (/Q\s*110\b|설사가\s*심합니다/.test(text) && !/Q\s*13[7-9]/.test(text)) {
+      return true;
+    }
+    if (
+      /설사|장운동을\s*항진|변을\s*하루/.test(excerpt) &&
+      !/Q\s*13[6-9]/.test(text)
+    ) {
+      return true;
+    }
+    if (
+      /Q\s*109\b|Q\s*110\b|Q\s*10[789]\b|백혈구|감염\s*의심|과립구/.test(text) &&
+      !/Q\s*13[6-9]/.test(text) &&
+      !isNutritionTopicText(excerpt)
+    ) {
+      return true;
+    }
+    if (/Q\s*85\b|수술\s*후\s*일상생활/.test(text) && !isNutritionTopicText(excerpt)) {
+      return true;
+    }
+    if (!isNutritionTopicText(excerpt) && !isNutritionTopicText(pageText)) {
+      return true;
+    }
+  }
+
+  if (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) {
+    if (/Q\s*28\b|가슴에\s*미세한\s*통증/.test(text)) return true;
+    if (/Q\s*129\b|생존\s*기간|5년\s*생존/.test(text) && !isSclcTreatmentTopicText(excerpt)) {
+      return true;
+    }
+    if (
+      /키트루다|티쎈트릭|3주에\s*1회|비소\s*세포폐암\s*환자들에서/.test(text) &&
+      !/Q\s*68|소세포암.*치료|소세포암,\s*어떻게/i.test(excerpt)
+    ) {
+      return true;
+    }
+    if (/Q\s*62\b|비소세포암과\s*소세포암/.test(text)) return true;
+    if (
+      /비소세포.*수술|비소세포폐암은\s*수술/.test(text) &&
+      !/Q\s*68|소세포암.*치료|소세포암은/i.test(excerpt)
+    ) {
+      return true;
+    }
+  }
+
+  if (DAILY_LIVING_QUERY.test(query)) {
+    if (/Q\s*75\b|해외\s*여행/.test(text)) return true;
+    if (
+      METASTATIC_QUERY.test(query) &&
+      /Q\s*85\b|수술\s*후/.test(text) &&
+      !/전이|metastatic/i.test(text)
+    ) {
+      return true;
+    }
+    if (
+      /Q\s*84\b|Q\s*87\b/.test(text) &&
+      !isDailyLivingTopicText(excerpt) &&
+      !/Q\s*85\b|일상\s*생활/.test(text)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function isSideEffectListQuestion(query: string): boolean {
@@ -326,6 +442,7 @@ function generalSideEffectCareBoost(query: string, text: string): number {
   if (/supportive care|지지\s*요법|quality of life/i.test(text)) boost += 0.08;
   if (isTreatmentProgramText(text)) boost -= 0.6;
   if (isDrugCatalogOrMonographText(text)) boost -= 0.45;
+  if (isTargetedTherapySideEffectText(text)) boost -= 0.5;
   return boost;
 }
 
@@ -618,6 +735,12 @@ function topicKeywordBoost(query: string, text: string): number {
       boost += 0.1;
     }
     if (OFF_TOPIC_EXCERPT.test(text)) boost -= 0.25;
+    return boost;
+  }
+  if (CAREGIVER_QUERY.test(query)) {
+    let boost = 0;
+    if (/Q\s*145|Q\s*146|호스피스|완화\s*의료/i.test(text)) boost += 0.24;
+    if (/가족|보호자|돌봄|정서/i.test(text)) boost += 0.12;
     return boost;
   }
   if (SUN_UV_QUERY.test(query)) {
@@ -1050,6 +1173,13 @@ function excerptRelatesToQuery(excerpt: string, query: string): boolean {
   ) {
     return false;
   }
+  if (
+    isGeneralSideEffectManagementQuery(query) &&
+    isTargetedTherapySideEffectText(excerpt)
+  ) {
+    return false;
+  }
+  if (shouldRejectCitationSource(query, excerpt, excerpt)) return false;
 
   // 한글 발췌(대한폐암학회 자료 등)는 영어 키워드 필터를 적용하지 않고
   // 한글 토큰 겹침으로 관련성을 판정한다. (영어 NCCN 발췌는 기존 로직 유지)
@@ -1261,6 +1391,7 @@ function selectHitsWithAnchors(
     isGeneralSideEffectManagementQuery(query) ||
     DAILY_LIVING_QUERY.test(query) ||
     SUN_UV_QUERY.test(query) ||
+    CAREGIVER_QUERY.test(query) ||
     BIOMARKER_QUERY.test(query) ||
     TREATMENT_METHOD_QUERY.test(query) ||
     (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query))
@@ -1270,15 +1401,27 @@ function selectHitsWithAnchors(
 
     for (const chunk of pool) {
       if (!hasTopicSignal(query, chunk.text)) continue;
+      if (shouldRejectCitationSource(query, chunk.text, chunk.text)) continue;
       const key = `${chunk.docId}:${chunk.page}`;
       if (seen.has(key)) continue;
       seen.add(key);
       const existing = ranked.find(
         (r) => r.chunk.docId === chunk.docId && r.chunk.page === chunk.page,
       );
-      const signalBoost = SUPPORTIVE_CARE_QUERY.test(query)
-        ? supportiveCareSignalStrength(chunk.text) * 0.04
-        : 0;
+      const signalBoost =
+        (SUPPORTIVE_CARE_QUERY.test(query)
+          ? supportiveCareSignalStrength(chunk.text) * 0.04
+          : 0) +
+        (isGeneralSideEffectManagementQuery(query) &&
+        GENERAL_CHEMO_SIDE_EFFECT_CARE_TEXT.test(chunk.text)
+          ? 0.55
+          : 0) +
+        (NUTRITION_QUERY.test(query) && /Q\s*13[6-9]\b/.test(chunk.text)
+          ? 0.55
+          : 0) +
+        (CAREGIVER_QUERY.test(query) && isCaregiverTopicText(chunk.text)
+          ? 0.45
+          : 0);
       anchorHits.push(
         existing
           ? {
@@ -1297,6 +1440,21 @@ function selectHitsWithAnchors(
     // 임베딩 상위 한글 청크를 함께 후보에 넣어 경쟁시킨다.
     for (const r of ranked) {
       if (chunkLang(r.chunk) !== "ko") continue;
+      if (shouldRejectCitationSource(query, r.chunk.text, r.chunk.text)) continue;
+      if (NUTRITION_QUERY.test(query) && !isNutritionTopicText(r.chunk.text)) {
+        continue;
+      }
+      if (
+        isGeneralSideEffectManagementQuery(query) &&
+        !queryMentionsSpecificDrug(query) &&
+        !GENERAL_CHEMO_SIDE_EFFECT_CARE_TEXT.test(r.chunk.text) &&
+        patientSideEffectSignalStrength(r.chunk.text) < 3
+      ) {
+        continue;
+      }
+      if (CAREGIVER_QUERY.test(query) && !isCaregiverTopicText(r.chunk.text)) {
+        continue;
+      }
       const key = `${r.chunk.docId}:${r.chunk.page}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -1354,8 +1512,12 @@ function koTopicHint(query: string): string {
     hints.push("소세포폐암 제한병기 확장병기 동시항암방사선 에토포시드 시스플라틴");
   else if (TREATMENT_METHOD_QUERY.test(query))
     hints.push("수술 방사선 항암 화학요법 치료 방법");
-  if (DAILY_LIVING_QUERY.test(query))
+  if (DAILY_LIVING_QUERY.test(query)) {
     hints.push("일상생활 주의사항 휴식 위생 정서 삶의 질");
+  }
+  if (CAREGIVER_QUERY.test(query)) {
+    hints.push("가족 보호자 돌봄 호스피스 완화의료 정서 지원 Q145 Q146");
+  }
   return hints.join(" ");
 }
 
@@ -1384,6 +1546,9 @@ function buildKoreanSearchQuery(
       SUN_UV_QUERY.test(query) ||
       CAREGIVER_QUERY.test(query))
   ) {
+    biomarker = "";
+  }
+  if (biomarker && CAREGIVER_QUERY.test(query)) {
     biomarker = "";
   }
   if (biomarker) parts.push(biomarker);
@@ -1593,6 +1758,9 @@ function buildTopicFallbackCitations(
   } else if (DAILY_LIVING_QUERY.test(query)) {
     strengthFn = dailyLivingSignalStrength;
     rejectExcerpt = isWeakSupportiveIntro;
+  } else if (CAREGIVER_QUERY.test(query)) {
+    strengthFn = (text) => (isCaregiverTopicText(text) ? 4 : 0);
+    rejectExcerpt = (excerpt) => !isCaregiverTopicText(excerpt);
   } else {
     return [];
   }
@@ -1655,11 +1823,15 @@ export function buildCitations(
   }
 
   for (const hit of candidates) {
+    const pageChunks = pool.filter(
+      (c) => c.docId === hit.chunk.docId && c.page === hit.chunk.page,
+    );
+    const pageFullText = pageChunks.map((c) => c.text).join("\n");
     const pageText = getPageText(pool, hit.chunk.docId, hit.chunk.page, query);
     if (
       isGeneralSideEffectManagementQuery(query) &&
-      (isDrugCatalogOrMonographText(pageText) ||
-        isTreatmentProgramText(pageText))
+      (isDrugCatalogOrMonographText(pageFullText) ||
+        isTreatmentProgramText(pageFullText))
     ) {
       continue;
     }
@@ -1667,7 +1839,8 @@ export function buildCitations(
     if (
       !excerpt ||
       !isSubstantiveExcerpt(excerpt) ||
-      isOffTopicExcerpt(excerpt)
+      isOffTopicExcerpt(excerpt) ||
+      shouldRejectCitationSource(query, pageFullText, excerpt)
     ) {
       continue;
     }
