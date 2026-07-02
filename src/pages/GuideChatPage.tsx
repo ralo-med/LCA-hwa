@@ -153,11 +153,11 @@ const GuideChatPage = () => {
                 type="button"
                 variant={chat.guideMode === value ? "default" : "outline"}
                 size="sm"
-                className="gap-1.5"
+                className="min-w-0 gap-1.5 text-pretty"
                 onClick={() => chat.setGuideMode(value)}
                 disabled={chat.isChatting}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-4 w-4 shrink-0" />
                 {label}
               </Button>
             ))}
@@ -452,10 +452,10 @@ const GuideChatPage = () => {
                 <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <Phone className="h-3.5 w-3.5" />
                 </span>
-                <span className="font-medium text-foreground">
+                <span className="min-w-0 flex-1 text-pretty font-medium text-foreground">
                   마음이 힘드신가요? 언제든 이야기할 수 있어요
                 </span>
-                <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
               </summary>
               <div className="grid gap-1.5 border-t border-border px-4 py-3 sm:grid-cols-2">
                 {SUPPORT_HOTLINES.map((h) => (

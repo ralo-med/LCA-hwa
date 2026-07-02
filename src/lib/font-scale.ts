@@ -9,11 +9,12 @@ export const DEFAULT_FONT_SCALE: FontScaleId = 'normal';
 export const FONT_SCALE_OPTIONS: {
   id: FontScaleId;
   label: string;
+  shortLabel: string;
   rootPx: number;
 }[] = [
-  { id: 'normal', label: '기본', rootPx: 16 },
-  { id: 'large', label: '크게', rootPx: 18 },
-  { id: 'xlarge', label: '아주 크게', rootPx: 20 },
+  { id: 'normal', label: '기본', shortLabel: '기본', rootPx: 16 },
+  { id: 'large', label: '크게', shortLabel: '크게', rootPx: 18 },
+  { id: 'xlarge', label: '아주 크게', shortLabel: '더 크게', rootPx: 20 },
 ];
 
 export function getFontScaleOption(id: FontScaleId) {

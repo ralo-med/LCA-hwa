@@ -37,9 +37,9 @@ const LandingPage = () => {
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-14 md:px-8 md:py-20 lg:grid-cols-2 lg:gap-16">
         {/* 왼쪽: 헤드라인 + 역할 선택 */}
         <div className="animate-rise">
-          <div className="flex items-center gap-3">
-            <span className="h-px w-8 bg-primary/60" />
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="h-px w-8 shrink-0 bg-primary/60" />
+            <span className="text-pretty text-xs font-semibold uppercase tracking-[0.18em] text-primary">
               화순전남대학교병원 · 폐암 정밀의료
             </span>
           </div>
@@ -47,7 +47,7 @@ const LandingPage = () => {
           <h1 className="font-display mt-6 text-pretty text-4xl font-bold leading-[1.16] tracking-tight md:text-5xl">
             혼자 걷지 않도록,
             <br />
-            <span className="relative whitespace-nowrap text-primary">
+            <span className="relative text-primary">
               곁에서 함께
               <span
                 aria-hidden
@@ -69,21 +69,21 @@ const LandingPage = () => {
                     aria-hidden
                     className="absolute inset-y-2 left-0 w-1 origin-center scale-y-0 rounded-full bg-primary transition-transform duration-300 group-hover:scale-y-100"
                   />
-                  <span className="font-display w-7 text-xl tabular-nums text-muted-foreground/45">
+                  <span className="font-display w-7 shrink-0 text-xl tabular-nums text-muted-foreground/45">
                     {String(idx + 1).padStart(2, '0')}
                   </span>
-                  <span className="flex items-center gap-2.5">
-                    <Icon className="h-5 w-5 text-primary" />
-                    <span>
+                  <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <Icon className="h-5 w-5 shrink-0 text-primary" />
+                    <span className="min-w-0">
                       <span className="block text-lg font-bold leading-tight">
                         {item.role}
                       </span>
-                      <span className="mt-0.5 block text-sm text-muted-foreground">
+                      <span className="mt-0.5 block text-pretty text-sm text-muted-foreground">
                         {item.description}
                       </span>
                     </span>
                   </span>
-                  <ArrowRight className="ml-auto h-5 w-5 shrink-0 text-muted-foreground/50 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary" />
+                  <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground/50 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary" />
                 </Link>
               );
             })}

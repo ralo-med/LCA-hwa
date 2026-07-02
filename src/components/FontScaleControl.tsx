@@ -7,17 +7,17 @@ export function FontScaleControl() {
 
   return (
     <div
-      className="shrink-0"
+      className="w-full max-w-full shrink-0 sm:w-auto"
       style={{ fontSize: '16px' }}
       role="group"
       aria-label="글자 크기 조절"
     >
-      <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-1">
-        <span className="ml-1 hidden items-center gap-1 pr-1 text-sm font-medium text-muted-foreground sm:inline-flex">
+      <div className="flex w-full items-center gap-1.5 rounded-lg border bg-muted/40 p-1.5 sm:gap-1 sm:p-1">
+        <span className="inline-flex shrink-0 items-center gap-1 pl-0.5 text-sm font-medium text-muted-foreground sm:ml-1 sm:pr-1">
           <ALargeSmall className="h-4 w-4" />
           글자
         </span>
-        <div className="grid w-52 grid-cols-3 gap-1">
+        <div className="grid w-full flex-1 grid-cols-3 gap-1 sm:w-64 sm:flex-none">
           {font.options.map((opt) => {
             const active = font.scaleId === opt.id;
             return (
@@ -28,7 +28,7 @@ export function FontScaleControl() {
                 aria-pressed={active}
                 aria-label={`글자 크기 ${opt.label}`}
                 className={cn(
-                  'inline-flex min-h-[44px] w-full items-center justify-center whitespace-nowrap rounded-md px-2 text-sm font-semibold transition-colors',
+                  'inline-flex min-h-[44px] w-full min-w-0 items-center justify-center rounded-md px-1 text-sm font-semibold leading-tight transition-colors',
                   active
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'text-muted-foreground hover:bg-background hover:text-foreground',

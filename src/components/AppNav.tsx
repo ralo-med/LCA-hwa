@@ -57,7 +57,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const linkClass = (isActive: boolean, disabled?: boolean) =>
   cn(
-    'inline-flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 items-center justify-center gap-1.5 border-b-2 px-2 py-2.5 text-sm font-medium transition-colors sm:min-w-0 sm:flex-initial sm:gap-2 sm:px-3',
+    'inline-flex min-h-[44px] min-w-0 flex-1 basis-[calc(50%-0.25rem)] items-center justify-center gap-1.5 border-b-2 px-2 py-2.5 text-center text-sm font-medium text-pretty transition-colors sm:basis-auto sm:flex-initial sm:gap-2 sm:px-3',
     isActive
       ? 'border-primary text-foreground'
       : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
@@ -66,12 +66,16 @@ const linkClass = (isActive: boolean, disabled?: boolean) =>
 
 const AppNav = () => {
   return (
-    <header className="no-print shrink-0 border-b bg-card pt-[env(safe-area-inset-top,0px)]">
+    <header className="no-print relative shrink-0 border-b bg-card pt-[env(safe-area-inset-top,0px)]">
+      <div className="absolute right-4 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-10 md:right-8">
+        <ThemeToggle />
+      </div>
+
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 md:px-8">
-        <div className="flex items-center justify-between gap-4">
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-4">
           <NavLink
             to="/"
-            className="flex min-w-0 items-center gap-3 rounded-lg transition-opacity hover:opacity-90"
+            className="flex min-w-0 items-center gap-3 rounded-lg pr-11 transition-opacity hover:opacity-90 sm:pr-0"
           >
             <img
               src="/logo.png"
@@ -81,17 +85,16 @@ const AppNav = () => {
               className="h-11 w-11 shrink-0 object-contain md:h-12 md:w-12"
             />
             <div className="min-w-0">
-              <p className="font-display text-sm font-bold tracking-tight text-foreground md:text-base">
+              <p className="text-pretty font-display text-sm font-bold leading-snug tracking-tight text-foreground md:text-base">
                 화순전남대학교병원
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-pretty text-xs leading-snug text-muted-foreground">
                 폐암 환자 케어 플랫폼
               </p>
             </div>
           </NavLink>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex w-full justify-center sm:w-auto sm:justify-end">
             <FontScaleControl />
-            <ThemeToggle />
           </div>
         </div>
 
