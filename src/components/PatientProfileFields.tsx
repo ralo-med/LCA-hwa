@@ -25,6 +25,20 @@ interface PatientProfileFieldsProps {
   resetMutations: () => void;
 }
 
+const MUTATION_DISPLAY_LABELS: Record<string, string> = {
+  none: "없음 / 모름",
+  egfr: "EGFR",
+  alk: "ALK",
+  ros1: "ROS1",
+  braf: "BRAF",
+  ntrk: "NTRK",
+  met: "MET",
+  ret: "RET",
+  kras: "KRAS",
+  egfr20: "EGFR ex20",
+  her2: "HER2",
+};
+
 const PatientProfileFields = ({
   profile,
   setAge,
@@ -45,7 +59,7 @@ const PatientProfileFields = ({
     <div className="space-y-6">
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <Label>
+          <Label className="text-base">
             진단 연령대
             <span className="ml-1.5 font-normal text-muted-foreground">
               (선택)
@@ -80,7 +94,7 @@ const PatientProfileFields = ({
               value={[sliderAge]}
               onValueChange={(v) => setAge(v[0] ?? null)}
             />
-            <div className="flex justify-between px-1 text-[10px] font-medium text-muted-foreground">
+            <div className="flex justify-between px-1 text-xs font-medium text-muted-foreground">
               <span>30대</span>
               <span>40대</span>
               <span>50대</span>
@@ -107,7 +121,7 @@ const PatientProfileFields = ({
       <Separator />
 
       <div className="space-y-2">
-        <Label>
+        <Label className="text-base">
           성별
           <span className="ml-1.5 font-normal text-muted-foreground">
             (선택)
@@ -133,7 +147,7 @@ const PatientProfileFields = ({
       <Separator />
 
       <div className="space-y-2">
-        <Label htmlFor="histology">
+        <Label htmlFor="histology" className="text-base">
           암 조직형 분류
           <span className="ml-1.5 font-normal text-muted-foreground">
             (선택)
@@ -145,90 +159,88 @@ const PatientProfileFields = ({
             setHistology(v === "unset" ? null : (v as Histology))
           }
         >
-          <SelectTrigger id="histology" className="min-h-11">
+          <SelectTrigger id="histology" className="min-h-11 text-base">
             <SelectValue placeholder="선택하지 않음" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="unset">선택하지 않음</SelectItem>
-            <SelectItem value="adenocarcinoma">
-              선암 (Adenocarcinoma)
-            </SelectItem>
-            <SelectItem value="squamous">
-              편평상피세포암 (Squamous Cell)
-            </SelectItem>
-            <SelectItem value="others">기타 조직형 (Other NSCLC)</SelectItem>
-            <SelectItem value="smallcell">소세포암 (Small Cell)</SelectItem>
+            <SelectItem value="adenocarcinoma">선암</SelectItem>
+            <SelectItem value="squamous">편평상피세포암</SelectItem>
+            <SelectItem value="others">기타 비소세포암</SelectItem>
+            <SelectItem value="smallcell">소세포암</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {histology != null && (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label
-                className={
-                  biomarkerSelectable ? undefined : "text-muted-foreground"
-                }
-              >
-                드라이버 유전자 변이
-                <span className="ml-1.5 font-normal text-muted-foreground">
-                  (선택)
-                </span>
-              </Label>
-              {biomarkerSelectable && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 shrink-0 gap-1 px-2 text-[10px] text-muted-foreground"
-                  onClick={resetMutations}
-                  disabled={mutationsAtDefault}
-                  aria-label="드라이버 유전자 변이 초기화"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  초기화
-                </Button>
-              )}
-            </div>
-            {biomarkerSelectable && (
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                여러 개 선택 시 모두 가진 환자만 집계합니다.
-              </p>
-            )}
-            {!biomarkerSelectable && (
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                소세포폐암은 표적치료 대상이 아니라 변이 선택이 없습니다.
-              </p>
-            )}
-            <div
-              className={
-                biomarkerSelectable
-                  ? "grid min-w-0 grid-cols-2 gap-2"
-                  : "grid min-w-0 grid-cols-2 gap-2 opacity-50 pointer-events-none"
-              }
-              aria-disabled={!biomarkerSelectable}
+      <Separator />
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <Label
+            className={
+              biomarkerSelectable ? "text-base" : "text-base text-muted-foreground"
+            }
+          >
+            유전자 변이
+            <span className="ml-1.5 font-normal text-muted-foreground">
+              (선택)
+            </span>
+          </Label>
+          {biomarkerSelectable && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="min-h-10 shrink-0 gap-1 px-2 text-sm text-muted-foreground"
+              onClick={resetMutations}
+              disabled={mutationsAtDefault}
+              aria-label="유전자 변이 초기화"
             >
-              {MUTATION_OPTIONS.map((m) => (
-                <Button
-                  key={m.id}
-                  type="button"
-                  variant={
-                    selectedMutations.includes(m.id) ? "default" : "outline"
-                  }
-                  size="sm"
-                  className="min-w-0 w-full justify-start px-1.5 text-[10px] leading-tight"
-                  disabled={!biomarkerSelectable}
-                  onClick={() => toggleMutation(m.id)}
-                >
-                  {m.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+              <RotateCcw className="h-4 w-4" />
+              초기화
+            </Button>
+          )}
+        </div>
+        {histology == null && (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            암 조직형을 선택하면 입력할 수 있습니다.
+          </p>
+        )}
+        {histology != null && biomarkerSelectable && (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            해당하는 항목을 선택해 주세요. 여러 개를 고를 수 있습니다.
+          </p>
+        )}
+        {histology != null && !biomarkerSelectable && (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            소세포암은 이 항목을 사용하지 않습니다.
+          </p>
+        )}
+        <div
+          className={
+            biomarkerSelectable && histology != null
+              ? "grid grid-cols-1 gap-2 sm:grid-cols-2"
+              : "grid grid-cols-1 gap-2 sm:grid-cols-2 opacity-60 pointer-events-none"
+          }
+          aria-disabled={!biomarkerSelectable || histology == null}
+        >
+          {MUTATION_OPTIONS.map((m) => (
+            <Button
+              key={m.id}
+              type="button"
+              variant={
+                selectedMutations.includes(m.id) ? "default" : "outline"
+              }
+              size="default"
+              className="min-h-11 w-full justify-start px-4 text-base font-medium"
+              disabled={!biomarkerSelectable || histology == null}
+              onClick={() => toggleMutation(m.id)}
+            >
+              {MUTATION_DISPLAY_LABELS[m.id] ?? m.label}
+            </Button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

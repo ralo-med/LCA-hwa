@@ -1,14 +1,20 @@
-import { BookOpen, ExternalLink, FileText, LayoutDashboard, Stethoscope } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { FontScaleControl } from '@/components/FontScaleControl';
-import { cn } from '@/lib/cn';
+import {
+  BookOpen,
+  ExternalLink,
+  FileText,
+  LayoutDashboard,
+  Stethoscope,
+} from "lucide-react";
+import { NavLink } from "react-router-dom";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { FontScaleControl } from "@/components/FontScaleControl";
+import { cn } from "@/lib/cn";
 
-import { DOCTORS_URL } from '@/constants/site';
+import { DOCTORS_URL } from "@/constants/site";
 
 type NavItem =
   | {
-      kind: 'internal';
+      kind: "internal";
       to: string;
       label: string;
       shortLabel: string;
@@ -16,7 +22,7 @@ type NavItem =
       end?: boolean;
     }
   | {
-      kind: 'external';
+      kind: "external";
       href: string;
       label: string;
       shortLabel: string;
@@ -25,43 +31,43 @@ type NavItem =
 
 const NAV_ITEMS: NavItem[] = [
   {
-    kind: 'internal',
-    to: '/guide-chat',
-    label: '환자 안내 챗봇',
-    shortLabel: '환자 챗봇',
+    kind: "internal",
+    to: "/guide-chat",
+    label: "환자 안내 챗봇",
+    shortLabel: "환자 챗봇",
     icon: BookOpen,
   },
   {
-    kind: 'internal',
-    to: '/dashboard',
-    label: '생존 대시보드',
-    shortLabel: '대시보드',
+    kind: "internal",
+    to: "/dashboard",
+    label: "생존 대시보드",
+    shortLabel: "대시보드",
     icon: LayoutDashboard,
     end: true,
   },
   {
-    kind: 'internal',
-    to: '/guides',
-    label: '가이드라인 PDF',
-    shortLabel: 'PDF',
+    kind: "internal",
+    to: "/guides",
+    label: "가이드라인 PDF",
+    shortLabel: "PDF",
     icon: FileText,
   },
   {
-    kind: 'external',
+    kind: "external",
     href: DOCTORS_URL,
-    label: '폐암 의료진',
-    shortLabel: '의료진',
+    label: "폐암 의료진",
+    shortLabel: "의료진",
     icon: Stethoscope,
   },
 ];
 
 const linkClass = (isActive: boolean, disabled?: boolean) =>
   cn(
-    'inline-flex min-h-[44px] min-w-0 flex-1 basis-[calc(50%-0.25rem)] items-center justify-center gap-1.5 border-b-2 px-2 py-2.5 text-center text-sm font-medium text-pretty transition-colors sm:basis-auto sm:flex-initial sm:gap-2 sm:px-3',
+    "inline-flex min-h-[44px] min-w-0 flex-1 basis-[calc(50%-0.25rem)] items-center justify-center gap-1.5 border-b-2 px-2 py-2.5 text-center text-sm font-medium text-pretty transition-colors sm:basis-auto sm:flex-initial sm:gap-2 sm:px-3",
     isActive
-      ? 'border-primary text-foreground'
-      : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
-    disabled && 'pointer-events-none opacity-50',
+      ? "border-primary text-foreground"
+      : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
+    disabled && "pointer-events-none opacity-50",
   );
 
 const AppNav = () => {
@@ -71,8 +77,8 @@ const AppNav = () => {
         <ThemeToggle />
       </div>
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 md:px-8">
-        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-4">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 md:px-8 md:py-5">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-4">
           <NavLink
             to="/"
             className="flex min-w-0 items-center gap-3 rounded-lg pr-11 transition-opacity hover:opacity-90 sm:pr-0"
@@ -99,13 +105,13 @@ const AppNav = () => {
         </div>
 
         <nav
-          className="-mb-px flex flex-wrap gap-x-1 border-t border-border/60 pt-1"
+          className="-mb-px flex flex-wrap gap-x-1 border-t border-border/60 pt-3"
           aria-label="주요 메뉴"
         >
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
 
-            if (item.kind === 'external') {
+            if (item.kind === "external") {
               return (
                 <a
                   key={item.href}

@@ -51,7 +51,7 @@ const PatientProfilePage = () => {
           </div>
 
           <h1 className="font-display mt-4 text-3xl font-bold tracking-tight md:text-4xl">
-            내 암 정보
+            내 정보
           </h1>
           <p className="mt-3 text-pretty text-base text-muted-foreground">
             아는 정보만 입력해 주세요. 모르는 항목은 비워두거나 건너뛰셔도

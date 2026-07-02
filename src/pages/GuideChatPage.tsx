@@ -122,7 +122,7 @@ const GuideChatPage = () => {
           <span className="font-medium text-foreground">
             {configured && hasPatientProfileInfo(profile)
               ? formatProfileSummary(profile)
-              : '내 암 정보 없음'}
+              : '내 정보 없음'}
           </span>
           <span className="text-muted-foreground/40">·</span>
           <Link

@@ -47,7 +47,7 @@ export function resolveProfileForSurvival(
 }
 
 export function formatProfileSummary(profile: PatientProfile): string {
-  if (!hasPatientProfileInfo(profile)) return '내 암 정보 없음';
+  if (!hasPatientProfileInfo(profile)) return '내 정보 없음';
 
   const parts: string[] = [];
   if (profile.age != null) {
@@ -66,7 +66,7 @@ export function formatProfileSummary(profile: PatientProfile): string {
     parts.push(labels[profile.histology]);
   }
 
-  return parts.join(' · ') || '내 암 정보 없음';
+  return parts.join(' · ') || '내 정보 없음';
 }
 
 export function genderLabel(gender: Gender | null): string {

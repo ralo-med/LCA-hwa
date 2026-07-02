@@ -13,7 +13,7 @@ const ROLE_ITEMS: RoleItem[] = [
     to: '/profile',
     icon: HeartHandshake,
     role: '환자·보호자',
-    description: '치료·부작용·일상을 쉽게 안내해 드려요.',
+    description: '궁금한 점을 안내 챗봇과 편하게 나눠 보세요.',
   },
   {
     to: '/dashboard',
@@ -25,7 +25,7 @@ const ROLE_ITEMS: RoleItem[] = [
 
 const LandingPage = () => {
   return (
-    <div className="relative overflow-hidden bg-background text-foreground">
+    <div className="relative flex flex-1 flex-col overflow-hidden bg-background text-foreground">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 bg-grain"
@@ -34,8 +34,7 @@ const LandingPage = () => {
         <div className="absolute -bottom-48 -left-24 h-120 w-120 rounded-full bg-chart-4/10 blur-3xl" />
       </div>
 
-      <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-14 md:px-8 md:py-20 lg:grid-cols-2 lg:gap-16">
-        {/* 왼쪽: 헤드라인 + 역할 선택 */}
+      <div className="relative mx-auto w-full max-w-6xl flex-1 px-5 pt-10 pb-12 md:px-8 md:pt-14 md:pb-16 lg:grid lg:grid-cols-2 lg:items-center lg:gap-16 lg:py-20">
         <div className="animate-rise">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="h-px w-8 shrink-0 bg-primary/60" />
@@ -44,7 +43,7 @@ const LandingPage = () => {
             </span>
           </div>
 
-          <h1 className="font-display mt-6 text-pretty text-4xl font-bold leading-[1.16] tracking-tight md:text-5xl">
+          <h1 className="font-display mt-8 text-pretty text-4xl font-bold leading-[1.16] tracking-tight md:mt-6 md:text-5xl">
             혼자 걷지 않도록,
             <br />
             <span className="relative text-primary">
@@ -56,7 +55,7 @@ const LandingPage = () => {
             </span>
           </h1>
 
-          <div className="mt-10">
+          <div className="mt-12 md:mt-10">
             {ROLE_ITEMS.map((item, idx) => {
               const Icon = item.icon;
               return (
@@ -88,26 +87,10 @@ const LandingPage = () => {
               );
             })}
           </div>
-
-          <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <Link
-              to="/guides"
-              className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-            >
-              가이드라인 PDF
-            </Link>
-            <Link
-              to="/about"
-              className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-            >
-              서비스 소개
-            </Link>
-          </div>
         </div>
 
-        {/* 오른쪽: 브랜드 일러스트 */}
         <div
-          className="animate-rise relative order-first lg:order-last"
+          className="animate-rise relative hidden lg:block lg:order-last"
           style={{ animationDelay: '0.08s' }}
         >
           <div className="overflow-hidden rounded-[1.75rem] border border-border/60 shadow-sm">
@@ -119,6 +102,16 @@ const LandingPage = () => {
             />
           </div>
         </div>
+      </div>
+
+      {/* 모바일: 푸터 바로 위 */}
+      <div className="mt-auto lg:hidden">
+        <img
+          src="/images/care.png"
+          alt="환자 곁에서 함께하는 보호자 일러스트"
+          className="aspect-4/3 w-full object-cover"
+          loading="lazy"
+        />
       </div>
     </div>
   );
