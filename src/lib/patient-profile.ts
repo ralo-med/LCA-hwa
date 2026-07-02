@@ -1,4 +1,5 @@
 import type { Gender, Histology, PatientProfile } from '@/types';
+import { histologyLabel } from '@/lib/utils';
 
 export const DEFAULT_PATIENT_PROFILE: PatientProfile = {
   age: 60,
@@ -57,13 +58,7 @@ export function formatProfileSummary(profile: PatientProfile): string {
     parts.push(profile.gender === 'female' ? '여성' : '남성');
   }
   if (profile.histology != null) {
-    const labels: Record<Histology, string> = {
-      adenocarcinoma: '선암',
-      squamous: '편평상피세포암',
-      others: '기타 비소세포암',
-      smallcell: '소세포암',
-    };
-    parts.push(labels[profile.histology]);
+    parts.push(histologyLabel(profile.histology));
   }
 
   return parts.join(' · ') || '내 정보 없음';

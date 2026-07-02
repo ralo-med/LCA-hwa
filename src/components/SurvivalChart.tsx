@@ -1,4 +1,4 @@
-import { CircleHelp, Globe2, TrendingUp } from "lucide-react";
+import { CircleHelp, Globe2, Loader2, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
@@ -82,6 +82,8 @@ const SurvivalChart = ({ data, isLoading }: SurvivalChartProps) => {
   const hasData = curve.length > 0;
   const korean = data?.koreanReference;
   const untreated = data?.untreatedEstimate;
+  const showInitialLoading = isLoading && !data;
+  const isRefreshing = isLoading && !!data;
 
   const treatedPath = hasData
     ? buildKmStepPath(curve, VIEW_W, VIEW_H, MAX_MONTHS)
@@ -151,7 +153,47 @@ const SurvivalChart = ({ data, isLoading }: SurvivalChartProps) => {
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="relative h-56 w-full">
+            <div
+              className="relative h-56 w-full"
+              aria-busy={isLoading}
+              aria-label="Kaplan-Meier 생존 곡선"
+            >
+              {showInitialLoading && (
+                <div
+                  className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-lg bg-muted/30"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Loader2
+                    className="h-6 w-6 animate-spin text-primary"
+                    aria-hidden
+                  />
+                  <p className="text-xs font-medium text-muted-foreground">
+                    생존 데이터를 불러오는 중…
+                  </p>
+                  <div className="flex w-4/5 max-w-xs flex-col gap-2 px-4">
+                    {[0.85, 0.65, 0.45].map((w) => (
+                      <div
+                        key={w}
+                        className="h-2 animate-pulse rounded-full bg-muted"
+                        style={{ width: `${w * 100}%` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {isRefreshing && (
+                <div
+                  className="pointer-events-none absolute right-2 top-2 z-10 flex items-center gap-1.5 rounded-full border border-border bg-background/90 px-2.5 py-1 text-[10px] font-medium text-muted-foreground shadow-sm backdrop-blur-sm"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                  결과 갱신 중
+                </div>
+              )}
+
               <svg
                 className="h-full w-full overflow-visible"
                 viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}

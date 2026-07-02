@@ -11,6 +11,8 @@
     "typecheck": "tsc -b --noEmit",
     "embed-pdfs": "node scripts/embed-pdfs.mjs",
     "embed-pdfs:extract": "node scripts/embed-pdfs.mjs --extract-only",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:guide": "node scripts/test-retrieval.mjs"
   },
   "dependencies": {
@@ -41,6 +43,7 @@
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.9",
     "dotenv": "^17.4.2",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -50,6 +53,7 @@
     "tslib": "^2.8.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vitest": "^4.1.9"
   }
 }

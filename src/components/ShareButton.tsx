@@ -1,4 +1,4 @@
-import { Check, Share2 } from 'lucide-react';
+import { Check, Loader2, Share2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button, type ButtonProps } from '@/components/ui/button';
@@ -20,18 +20,25 @@ export function ShareButton({
   className,
 }: ShareButtonProps) {
   const [done, setDone] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   const handleShare = async () => {
-    const result = await shareContent(payload);
-    if (result === 'copied') {
-      toast.success('내용을 복사했어요. 카톡·문자에 붙여넣어 보내세요.');
-      setDone(true);
-      setTimeout(() => setDone(false), 2000);
-    } else if (result === 'shared') {
-      setDone(true);
-      setTimeout(() => setDone(false), 2000);
-    } else if (result === 'failed') {
-      toast.error('공유에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    if (isSharing) return;
+    setIsSharing(true);
+    try {
+      const result = await shareContent(payload);
+      if (result === 'copied') {
+        toast.success('내용을 복사했어요. 카톡·문자에 붙여넣어 보내세요.');
+        setDone(true);
+        setTimeout(() => setDone(false), 2000);
+      } else if (result === 'shared') {
+        setDone(true);
+        setTimeout(() => setDone(false), 2000);
+      } else if (result === 'failed') {
+        toast.error('공유에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      }
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -42,9 +49,13 @@ export function ShareButton({
       size={size}
       className={className}
       onClick={handleShare}
+      disabled={isSharing}
       aria-label={`${label} 하기`}
+      aria-busy={isSharing}
     >
-      {done ? (
+      {isSharing ? (
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+      ) : done ? (
         <Check className="h-4 w-4 text-primary" />
       ) : (
         <Share2 className="h-4 w-4" />

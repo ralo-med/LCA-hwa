@@ -6,6 +6,12 @@
  *   - event = true → 사망(이벤트 발생), false → 중도절단(censored)
  */
 
+/** Greenwood 95% CI z-score */
+const Z_SCORE_95 = 1.96;
+
+/** 중앙 생존 임계값 */
+const MEDIAN_SURVIVAL_THRESHOLD = 0.5;
+
 export interface KMSample {
   timeMonths: number;
   event: boolean;
@@ -71,7 +77,7 @@ export function fitKaplanMeier(samples: KMSample[]): KMResult {
   }
 
   // 중앙 생존: S(t) ≤ 0.5가 되는 첫 t
-  const medianPoint = curve.find((p) => p.survival <= 0.5);
+  const medianPoint = curve.find((p) => p.survival <= MEDIAN_SURVIVAL_THRESHOLD);
   const median = medianPoint?.t ?? null;
 
   // 임의 시점 t에서의 S(t) 추정 (step function의 마지막 값)
@@ -92,8 +98,8 @@ export function fitKaplanMeier(samples: KMSample[]): KMResult {
     }
     const p = curve[idx];
     const se = Math.sqrt(Math.max(0, p.variance));
-    const lower = Math.max(0, p.survival - 1.96 * se);
-    const upper = Math.min(1, p.survival + 1.96 * se);
+    const lower = Math.max(0, p.survival - Z_SCORE_95 * se);
+    const upper = Math.min(1, p.survival + Z_SCORE_95 * se);
     return { survival: p.survival, ci95: [lower, upper] };
   };
 

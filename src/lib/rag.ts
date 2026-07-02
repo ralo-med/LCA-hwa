@@ -153,6 +153,112 @@ const SUN_UV_QUERY =
   /자외선|선크림|햇빛|햇볕|sunscreen|\bUV\b|ultraviolet|sun\s*exposure/i;
 const EMOTIONAL_SUPPORT_QUERY =
   /무섭|무서워|무서운|두렵|두려워|겁이\s*나|겁나|불안|초조|우울|눈물|울고|울어|울었|불면|잠\s*(이|도|을)?\s*(안|못)\s*(와|자|오)|잠이\s*오지|외롭|외로워|막막|답답|절망|무기력|허무|살고\s*싶|죽고\s*싶|죽을\s*것\s*같|끝난\s*것\s*같|충격|받아들이기\s*(힘|어려)|견디기\s*(힘|어려)|버티기\s*(힘|어려)|괴롭|괴로워|슬프|슬퍼|슬픔|공포|패닉|멘붕|힘들어|힘드네|지쳐|지친|서럽|막연|걱정돼|걱정이\s*(돼|되|많)/i;
+const DRUG_NAME_QUERY =
+  /이리노테칸|irinotecan|토포테칸|topotecan|벨로테칸|veliparib|젬시타빈|gemcitabine|페메트렉|pemetrex|도세탁|docetaxel|파클리탁|paclitaxel|시스플라틴|cisplatin|카보플라틴|carboplatin|에토포|etoposide|비노렐빈|vinorelbine|탁센|펨브롤|pembrolizumab|키트루다|니볼루|nivolumab|옵디보|타그리소|osimertinib|아트로핀|atropin|로페라마이드|loperamide|플라티늄|platinum/i;
+const GENERAL_SIDE_EFFECT_MANAGEMENT_QUERY =
+  /부작용\s*(?:이\s*)?(?:어떤|뭐|무엇|종류|목록|들)|(?:어떤|무슨)\s*부작용|부작용\s*(?:은|를|의|이)?\s*(?:어떻|관리|대처|완화|줄|견|알)|(?:어떻|관리|대처|완화).{0,16}부작용|항암(?:치료|제|화학).{0,24}부작용|치료\s*과정.{0,24}부작용|side\s*effect.{0,24}(manage|manag|what|list)/i;
+const GENERAL_CHEMO_SIDE_EFFECT_CARE_TEXT =
+  /일반적\s*주의사항|부작용\s*관리를\s*잘|부작용이\s*흔히\s*발생|항암화학치료\s*후\s*(?:일반|설사|오심|구토|부작용)|병원을\s*찾|응급실을\s*방문|Q\s*10[9]|Q\s*11[0-2]/i;
+const PATIENT_SIDE_EFFECT_SYMPTOM_TEXT =
+  /탈모|구역|구토|구내염|설사|빈혈|백혈구|혈소판|골수|오심|피로|감염|메스꺼|nausea|vomiting|fatigue|diarrhea|mouth|mucositis|low blood|side effect/i;
+const TREATMENT_PROGRAM_TEXT =
+  /어떤\s*환자가\s*항암|항암(?:화학)?치료를\s*시행|독성이\s*항암|치료\s*이득|이득.*독성|유지요법|몇\s*번\s*하나요|얼마\s*간격|누적(?:되는)?\s*부작용으로\s*일정\s*주기|표적치료제는\s*부작용이\s*적은\s*편|경구약물은\s*아니며|Q\s*9[3-4]\b|Q\s*98\b|페메트렉시드만을\s*3주마다/i;
+const CAREGIVER_QUERY =
+  /가족|보호자|caregiver|돌봄|도와줄|도와\s*드/i;
+const DRUG_MONOGRAPH_TEXT =
+  /(?:Q\s*\d+|Q\d+)[\s\S]{0,120}(?:은|는)\s*어떤\s*약제인가요/i;
+const DRUG_CATALOG_TEXT =
+  /항암(?:화학)?(?:치료)?제(?:의|)\s*종류|사용되는\s*항암화학치료제/i;
+
+/** 주제별 본문 신호 — 한글·영문 통합 (bare `식이` 등 부분 일치 오탐 방지) */
+const NUTRITION_TOPIC_TEXT =
+  /영양\s*관리|식이\s*요법|식단|식사|음식|체중\s*관리|체중\s*유지|균형\s*잡힌|단백질|섭취|도움이\s*되는\s*식단|식사에\s*주의|먹어야\s*하는\s*음식|금연.*음식|야채|채소|과일|healthful foods|healthy living|Common goals for healthy living|managing body weight|Eating healthful/i;
+const NUTRITION_QA_MARKER =
+  /Q\s*13[6-9]\b|폐암\s*환자에게\s*도움이\s*되는\s*식단|항암치료\s*중\s*식사|방사선\s*치료.*식이/i;
+const BIOMARKER_TOPIC_TEXT =
+  /PD-?L1|EGFR|ALK|ROS1|BRAF|KRAS|표적\s*치료|표적\s*항암|바이오마커|생체\s*표지|유전자\s*변이|돌연변이|면역\s*관문|면역\s*치료|면역\s*항암|immunotherapy|immune checkpoint|abnormal PD-L1/i;
+const SUPPORTIVE_CARE_TOPIC_TEXT =
+  /supportive care|palliative care|지지\s*요법|완화\s*치료|증상\s*관리|nausea|vomiting|antiemetic|fatigue|side effect|메스꺼움|구토|오심|피로|부작용|설사|변비|감염|탈모|구역|구내염|일반적\s*주의사항/i;
+const DAILY_LIVING_TOPIC_TEXT =
+  /supportive care|quality of life|지지\s*요법|삶의\s*질|fatigue|infection|hygiene|hand washing|exercise|emotional|rest|피로|감염|위생|운동|정서|휴식|일상\s*생활/i;
+const TREATMENT_TOPIC_TEXT =
+  /Surgery is a standard|Treating lung cancer with surgery|lobectomy|pneumonectomy|definitive chemoradiation|수술적\s*치료|수술\s*치료|폐엽\s*절제|폐엽절제|쐐기\s*절제|radiation|chemotherapy|chemoradiation|방사선\s*치료|항암\s*화학|화학\s*요법|동시항암방사선/i;
+const SCLC_TREATMENT_TOPIC_TEXT =
+  /Initial treatment|Limited.?stage|Extensive.?stage|chemoradiation|chemoimmunotherapy|platinum|durvalumab|초기\s*치료|1차\s*치료|제한\s*병기|확장\s*병기|동시항암방사선|소세포/i;
+const SUN_UV_TOPIC_TEXT =
+  /sunscreen|sun exposure|ultraviolet|자외선|햇볕|선크림|Common goals for healthy living/i;
+
+function isNutritionTopicText(text: string): boolean {
+  return NUTRITION_TOPIC_TEXT.test(text) || NUTRITION_QA_MARKER.test(text);
+}
+
+function isBiomarkerTopicText(text: string): boolean {
+  return BIOMARKER_TOPIC_TEXT.test(text);
+}
+
+function isSupportiveCareTopicText(text: string): boolean {
+  return SUPPORTIVE_CARE_TOPIC_TEXT.test(text);
+}
+
+function isDailyLivingTopicText(text: string): boolean {
+  return DAILY_LIVING_TOPIC_TEXT.test(text);
+}
+
+function isTreatmentTopicText(text: string): boolean {
+  return TREATMENT_TOPIC_TEXT.test(text);
+}
+
+function isSclcTreatmentTopicText(text: string): boolean {
+  return SCLC_TREATMENT_TOPIC_TEXT.test(text);
+}
+
+function hasTopicAnchor(query: string): boolean {
+  return (
+    NUTRITION_QUERY.test(query) ||
+    SUPPORTIVE_CARE_QUERY.test(query) ||
+    BIOMARKER_QUERY.test(query) ||
+    TREATMENT_METHOD_QUERY.test(query) ||
+    DAILY_LIVING_QUERY.test(query) ||
+    SUN_UV_QUERY.test(query) ||
+    (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) ||
+    SCLC_QUERY.test(query) ||
+    METASTATIC_QUERY.test(query) ||
+    EARLY_STAGE_QUERY.test(query) ||
+    MY_DISEASE_QUERY.test(query)
+  );
+}
+
+/** 질의 주제와 발췌 본문이 같은 토픽인지 (한·영 통합) */
+function excerptHasTopicAnchor(query: string, excerpt: string): boolean {
+  if (NUTRITION_QUERY.test(query)) return isNutritionTopicText(excerpt);
+  if (BIOMARKER_QUERY.test(query)) return isBiomarkerTopicText(excerpt);
+  if (isGeneralSideEffectManagementQuery(query)) {
+    return (
+      GENERAL_CHEMO_SIDE_EFFECT_CARE_TEXT.test(excerpt) ||
+      (/부작용이\s*흔히|탈모.*구역|구토.*설사/i.test(excerpt) &&
+        !isTreatmentProgramText(excerpt) &&
+        !isDrugCatalogOrMonographText(excerpt))
+    );
+  }
+  if (SUPPORTIVE_CARE_QUERY.test(query)) {
+    if (isWeakSupportiveIntro(excerpt)) return false;
+    return isSupportiveCareTopicText(excerpt);
+  }
+  if (DAILY_LIVING_QUERY.test(query)) return isDailyLivingTopicText(excerpt);
+  if (SUN_UV_QUERY.test(query)) return SUN_UV_TOPIC_TEXT.test(excerpt);
+  if (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) {
+    return isSclcTreatmentTopicText(excerpt);
+  }
+  if (TREATMENT_METHOD_QUERY.test(query)) return isTreatmentTopicText(excerpt);
+  if (OVERVIEW_QUERY.test(query) || MY_DISEASE_QUERY.test(query)) {
+    return (
+      isTreatmentTopicText(excerpt) ||
+      isSupportiveCareTopicText(excerpt) ||
+      isBiomarkerTopicText(excerpt)
+    );
+  }
+  return false;
+}
 
 const MIN_CITATION_SIMILARITY = 0.5;
 const OFF_TOPIC_EXCERPT =
@@ -167,6 +273,72 @@ function hasEmbeddings(store: GuideChunkStore): boolean {
     store.model === EMBEDDING_MODEL &&
     store.chunks.some((c) => c.embedding.length > 0)
   );
+}
+
+/** 질문에 특정 약제명이 포함되는지 */
+export function queryMentionsSpecificDrug(query: string): boolean {
+  return DRUG_NAME_QUERY.test(query);
+}
+
+/** 넓은 부작용·증상 관리 질문 (특정 약제를 묻지 않음) */
+export function isGeneralSideEffectManagementQuery(query: string): boolean {
+  if (queryMentionsSpecificDrug(query)) return false;
+  if (GENERAL_SIDE_EFFECT_MANAGEMENT_QUERY.test(query)) return true;
+  return (
+    SUPPORTIVE_CARE_QUERY.test(query) &&
+    !BIOMARKER_QUERY.test(query) &&
+    !TREATMENT_METHOD_QUERY.test(query) &&
+    query.length < 80
+  );
+}
+
+/** patient_qa 등 약제별 설명 Q&A 청크 */
+export function isDrugMonographText(text: string): boolean {
+  return DRUG_MONOGRAPH_TEXT.test(text);
+}
+
+/** 약제 종류 나열·약물 설명 Q&A — 일반 부작용 질문과 맞지 않음 */
+export function isDrugCatalogOrMonographText(text: string): boolean {
+  if (isDrugMonographText(text)) return true;
+  if (!DRUG_CATALOG_TEXT.test(text)) return false;
+  if (/부작용이\s*흔히\s*발생|탈모,\s*구역,\s*구토/i.test(text)) return false;
+  return /세포독성\s*항암|표적\s*항암|정맥주사로\s*투여/i.test(text);
+}
+
+/** 치료 시행 기준·유지요법·투약 주기 등 — 부작용 질문과 맞지 않음 */
+export function isTreatmentProgramText(text: string): boolean {
+  return TREATMENT_PROGRAM_TEXT.test(text);
+}
+
+function isSideEffectListQuestion(query: string): boolean {
+  return /부작용\s*(?:이\s*)?(?:어떤|뭐|무엇|종류|목록|들)|(?:어떤|무슨)\s*부작용/i.test(
+    query,
+  );
+}
+
+function generalSideEffectCareBoost(query: string, text: string): number {
+  if (!isGeneralSideEffectManagementQuery(query)) return 0;
+
+  let boost = 0;
+  if (GENERAL_CHEMO_SIDE_EFFECT_CARE_TEXT.test(text)) boost += 0.38;
+  if (/탈모.*구역|구토.*설사|부작용이\s*흔히/i.test(text)) boost += 0.22;
+  if (PATIENT_SIDE_EFFECT_SYMPTOM_TEXT.test(text)) boost += 0.14;
+  if (/supportive care|지지\s*요법|quality of life/i.test(text)) boost += 0.08;
+  if (isTreatmentProgramText(text)) boost -= 0.6;
+  if (isDrugCatalogOrMonographText(text)) boost -= 0.45;
+  return boost;
+}
+
+function buildGeneralSideEffectAnswerGuide(question: string): string {
+  if (!isGeneralSideEffectManagementQuery(question)) return "";
+  const listQuestion = isSideEffectListQuestion(question);
+  return `
+
+**환자 부작용 질문 추가 규칙**
+- 질문·환자 정보·대화 맥락에 없는 **특정 약제명(이리노테칸·젬시타빈·펨브롤리주맙·페메트렉시드 등)은 답변에 넣지 마세요.**
+- **치료 이득과 독성 비교**, **유지요법**, **표적치료제는 부작용이 적다**, **휴약기·투약 주기** 같은 **치료 결정·요법 설명**은 질문이 그것을 묻지 않는 한 **답변에 넣지 마세요.** (원문에 있어도 빼세요.)
+${listQuestion ? "- 질문은 부작용 **종류**입니다. **오심·구토·설사·탈모·피로·구내염·감염·백혈구/혈소판 감소·빈혈** 등 환자가 겪을 수 있는 증상을 먼저 나열하세요." : "- 질문은 부작용 **관리**입니다. 증상별 관리·생활 수칙·병원/응급 연락 기준을 설명하세요."}
+- 마지막 항목 또는 마지막 문장에, 지금 가장 불편한 증상이나 맞고 계신 약 이름을 알려주시면 더 맞춤으로 정리해 드릴 수 있다고 **한 문장**으로 부드럽게 안내하세요.`;
 }
 
 function keywordScore(query: string, text: string): number {
@@ -302,6 +474,9 @@ function docBoost(targetDocs: GuideDocId[], docId: GuideDocId): number {
 }
 
 function topicSearchHint(query: string): string {
+  if (isGeneralSideEffectManagementQuery(query)) {
+    return "chemotherapy side effects management general precautions nausea vomiting diarrhea infection hygiene nutrition when to call doctor emergency supportive care";
+  }
   if (NUTRITION_QUERY.test(query)) {
     return "nutrition diet registered dietitian healthy eating weight management supportive care survivorship healthy living";
   }
@@ -333,6 +508,9 @@ function topicSearchHint(query: string): string {
 }
 
 function topicKeywordBoost(query: string, text: string): number {
+  const generalSideEffectBoost = generalSideEffectCareBoost(query, text);
+  if (generalSideEffectBoost !== 0) return generalSideEffectBoost;
+
   // 영어 NCCN 페이지와 한글 자료(대한폐암학회)가 동등하게 경쟁하도록
   // 각 토픽에서 영어·한글 키워드 모두에 가산점을 준다.
   // 소세포 치료 질의는 일반 치료법 분기보다 먼저 평가한다(비소세포 페이지가
@@ -354,18 +532,13 @@ function topicKeywordBoost(query: string, text: string): number {
   }
   if (NUTRITION_QUERY.test(query)) {
     let boost = 0;
-    if (
-      /healthful foods|healthy living|Common goals for healthy living|영양\s*관리|식이|식단|균형\s*잡힌|단백질/i.test(
-        text,
-      )
-    ) {
-      boost += 0.22;
-    }
+    if (/Q\s*13[6-9]\b/.test(text)) boost += 0.28;
+    if (isNutritionTopicText(text)) boost += 0.22;
     if (/managing body weight|body weight|체중\s*관리|체중\s*유지/i.test(text))
       boost += 0.08;
     if (
       /registered dietitian/i.test(text) &&
-      !/healthful foods|healthy living/i.test(text)
+      !isNutritionTopicText(text)
     ) {
       boost -= 0.12;
     }
@@ -462,14 +635,17 @@ function topicKeywordBoost(query: string, text: string): number {
 
 function supportiveCareSignalStrength(text: string): number {
   let strength = 0;
-  if (/nausea|vomiting|antiemetic/i.test(text)) strength += 4;
-  if (/diarrhea|constipation|mouth|mucositis|stomatitis/i.test(text)) {
+  if (/일반적\s*주의사항|부작용\s*관리/i.test(text)) strength += 5;
+  if (/nausea|vomiting|antiemetic|오심|구토/i.test(text)) strength += 4;
+  if (/diarrhea|constipation|mouth|mucositis|stomatitis|설사|변비|구내염/i.test(text)) {
     strength += 3;
   }
-  if (/side effect|fatigue|infection|fever|pain|bleeding/i.test(text)) {
+  if (/side effect|fatigue|infection|fever|pain|bleeding|부작용|피로|감염/i.test(text)) {
     strength += 2;
   }
-  if (/supportive care|palliative care|symptom/i.test(text)) strength += 1;
+  if (/supportive care|palliative care|symptom|지지\s*요법|완화\s*치료/i.test(text)) {
+    strength += 1;
+  }
   if (isCoverOrFrontMatter(text) || isNavigationOrTocText(text)) strength -= 3;
   return strength;
 }
@@ -487,45 +663,16 @@ function isWeakSupportiveIntro(excerpt: string): boolean {
 }
 
 function hasTopicSignal(query: string, text: string): boolean {
-  if (NUTRITION_QUERY.test(query)) {
-    return /healthful foods|healthy living|Common goals for healthy living|managing body weight/i.test(
-      text,
-    );
-  }
-  if (BIOMARKER_QUERY.test(query)) {
-    return /PD-L1|abnormal PD-L1|immunotherapy|immune checkpoint/i.test(text);
-  }
-  if (SUPPORTIVE_CARE_QUERY.test(query)) {
-    return /supportive care|nausea|vomiting|fatigue|side effect|infection|diarrhea/i.test(
-      text,
-    );
-  }
-  if (DAILY_LIVING_QUERY.test(query)) {
-    return /supportive care|quality of life|fatigue|infection|hygiene|exercise|nutrition|emotional/i.test(
-      text,
-    );
-  }
-  if (SUN_UV_QUERY.test(query)) {
-    return /sunscreen|sun exposure|ultraviolet|Common goals for healthy living/i.test(
-      text,
-    );
-  }
-  if (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) {
-    return /Initial treatment|Limited.?stage|Extensive.?stage|chemoradiation|chemoimmunotherapy|platinum/i.test(
-      text,
-    );
-  }
-  if (TREATMENT_METHOD_QUERY.test(query)) {
-    return /Surgery is a standard|Treating lung cancer with surgery|lobectomy|definitive chemoradiation/i.test(
-      text,
-    );
-  }
-  return false;
+  return excerptHasTopicAnchor(query, text);
 }
 
 function getTopicPatterns(query: string): RegExp[] {
   if (NUTRITION_QUERY.test(query)) {
     return [
+      /Q\s*137|도움이\s*되는\s*식단/i,
+      /Q\s*138|식사에\s*주의|영양\s*관리/i,
+      /Q\s*136|금연.*음식/i,
+      /Q\s*139|방사선\s*치료.*식이/i,
       /Common goals for healthy living include/i,
       /healthful foods/i,
       /healthy living/i,
@@ -534,6 +681,7 @@ function getTopicPatterns(query: string): RegExp[] {
   }
   if (BIOMARKER_QUERY.test(query)) {
     return [
+      /PD-?L1|표적\s*치료|면역\s*관문|유전자\s*변이|돌연변이/i,
       /PD-L1|abnormal PD-L1/i,
       /immunotherapy restores/i,
       /immune checkpoint inhibitor/i,
@@ -542,47 +690,57 @@ function getTopicPatterns(query: string): RegExp[] {
   }
   if (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) {
     return [
-      /Initial treatment/i,
-      /Limited.?stage cancers|limited-stage/i,
-      /Extensive.?stage|extensive-stage/i,
-      /chemoradiation|concurrent chemoradiation/i,
+      /Initial treatment|초기\s*치료|1차\s*치료/i,
+      /Limited.?stage cancers|limited-stage|제한\s*병기/i,
+      /Extensive.?stage|extensive-stage|확장\s*병기/i,
+      /chemoradiation|concurrent chemoradiation|동시항암방사선/i,
       /chemoimmunotherapy|platinum/i,
       /durvalumab/i,
     ];
   }
   if (SUPPORTIVE_CARE_QUERY.test(query)) {
     return [
+      /일반적\s*주의사항|부작용\s*관리/i,
       /supportive care/i,
-      /palliative care/i,
-      /nausea|vomiting/i,
-      /fatigue/i,
-      /side effect/i,
+      /palliative care|지지\s*요법|완화\s*치료/i,
+      /nausea|vomiting|오심|구토/i,
+      /fatigue|피로/i,
+      /side effect|부작용/i,
+    ];
+  }
+  if (isGeneralSideEffectManagementQuery(query)) {
+    return [
+      /일반적\s*주의사항|부작용\s*관리/i,
+      /오심|구토|항구토|nausea|vomiting/i,
+      /설사|diarrhea/i,
+      /감염|infection|위생|hygiene/i,
+      /병원|응급|when to call|supportive care/i,
     ];
   }
   if (DAILY_LIVING_QUERY.test(query)) {
     return [
-      /supportive care addresses/i,
-      /quality of life/i,
-      /fatigue/i,
-      /infection/i,
-      /hygiene|hand washing/i,
-      /exercise|physical activity/i,
-      /emotional|social needs/i,
+      /supportive care addresses|지지\s*요법/i,
+      /quality of life|삶의\s*질/i,
+      /fatigue|피로/i,
+      /infection|감염/i,
+      /hygiene|hand washing|위생/i,
+      /exercise|physical activity|운동/i,
+      /emotional|social needs|정서/i,
     ];
   }
   if (SUN_UV_QUERY.test(query)) {
     return [
-      /sunscreen|sun exposure|ultraviolet/i,
+      /sunscreen|sun exposure|ultraviolet|자외선|선크림/i,
       /Common goals for healthy living include/i,
     ];
   }
   if (TREATMENT_METHOD_QUERY.test(query)) {
     return [
-      /Surgery is a standard treatment/i,
+      /Surgery is a standard treatment|수술적\s*치료|수술\s*치료/i,
       /Treating lung cancer with surgery/i,
-      /lobectomy|pneumonectomy/i,
-      /definitive chemoradiation|definitive radiation/i,
-      /postoperative therapy|adjuvant/i,
+      /lobectomy|pneumonectomy|폐엽\s*절제|폐엽절제/i,
+      /definitive chemoradiation|definitive radiation|동시항암방사선/i,
+      /postoperative therapy|adjuvant|보조\s*요법/i,
     ];
   }
   return [];
@@ -699,7 +857,7 @@ function retrievalScoreAdjust(
   if (OFF_TOPIC_EXCERPT.test(text)) adjust -= 0.28;
   if (DAILY_LIVING_QUERY.test(query) && page <= 12) adjust -= 0.06;
   if (NUTRITION_QUERY.test(query) && /registered dietitian/i.test(text)) {
-    if (!/healthful foods|healthy living/i.test(text)) adjust -= 0.15;
+    if (!isNutritionTopicText(text)) adjust -= 0.15;
   }
   return adjust + topicKeywordBoost(query, text);
 }
@@ -723,6 +881,10 @@ export function buildRetrievalQuery(
   query: string,
   priorHistory: GuideChatMessage[],
 ): string {
+  if (isGeneralSideEffectManagementQuery(query)) {
+    return `${query} 항암화학치료 후 일반적 주의사항 오심 구토 설사 감염 증상`.trim();
+  }
+
   if (priorHistory.length === 0) return query;
 
   const topic = extractConversationTopic(priorHistory);
@@ -804,6 +966,9 @@ const KO_RELEVANCE_STOPWORDS = new Set([
   "무슨",
   "어떤",
   "종류",
+  "되는",
+  "먹어",
+  "궁금",
 ]);
 
 function hasHangul(text: string): boolean {
@@ -833,15 +998,15 @@ function koreanContentTerms(query: string): string[] {
 /** 한글 발췌용 관련성 판정 — 영어 키워드 대신 질의-발췌 토큰 겹침으로 평가 */
 function koreanExcerptRelates(excerpt: string, query: string): boolean {
   const terms = koreanContentTerms(query);
-  // 의미 토큰이 없으면(질의가 매우 짧거나 일반적이면) 임베딩 랭킹을 신뢰해 통과
-  if (terms.length === 0) return true;
-  // "종양표지자" ↔ "종양 표지자"처럼 띄어쓰기가 달라도 매칭되도록 공백 무시 비교
+  if (terms.length === 0) return excerptHasTopicAnchor(query, excerpt);
+
   const exNoSpace = excerpt.replace(/\s+/g, "");
-  if (terms.some((t) => excerpt.includes(t) || exNoSpace.includes(t)))
-    return true;
-  // 직접적 토큰 겹침이 없어도, 같은 주제(치료·바이오마커·부작용 등) 키워드가
-  // 발췌에 있으면 관련 있다고 본다. (임베딩이 이미 상위로 올린 한글 근거 신뢰)
-  return topicKeywordBoost(query, excerpt) > 0;
+  const matched = terms.filter(
+    (t) => excerpt.includes(t) || exNoSpace.includes(t),
+  );
+  if (matched.length >= 2) return true;
+  if (matched.length >= 1 && excerptHasTopicAnchor(query, excerpt)) return true;
+  return false;
 }
 
 /** 한글 페이지 발췌 추출 — 질의 토큰과 가장 많이 겹치는 문장 구간을 반환 */
@@ -879,56 +1044,36 @@ function extractKoreanExcerpt(
 function excerptRelatesToQuery(excerpt: string, query: string): boolean {
   if (isOffTopicExcerpt(excerpt)) return false;
 
+  if (
+    isGeneralSideEffectManagementQuery(query) &&
+    (isDrugCatalogOrMonographText(excerpt) || isTreatmentProgramText(excerpt))
+  ) {
+    return false;
+  }
+
   // 한글 발췌(대한폐암학회 자료 등)는 영어 키워드 필터를 적용하지 않고
   // 한글 토큰 겹침으로 관련성을 판정한다. (영어 NCCN 발췌는 기존 로직 유지)
   if (hasHangul(excerpt)) {
+    if (
+      isGeneralSideEffectManagementQuery(query) &&
+      GENERAL_CHEMO_SIDE_EFFECT_CARE_TEXT.test(excerpt)
+    ) {
+      return true;
+    }
     return koreanExcerptRelates(excerpt, query);
   }
 
   const exLower = excerpt.toLowerCase();
 
-  if (BIOMARKER_QUERY.test(query)) {
-    return /pd-l1|immunotherapy|immune checkpoint/i.test(excerpt);
-  }
-  if (NUTRITION_QUERY.test(query)) {
-    return /healthful foods|healthy living|common goals for healthy living|managing body weight|eating healthful/i.test(
-      exLower,
-    );
-  }
-  if (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) {
-    return /initial treatment|limited.?stage|extensive.?stage|chemoradiation|chemoimmunotherapy|platinum|durvalumab|small cell/i.test(
-      exLower,
-    );
-  }
-  if (DAILY_LIVING_QUERY.test(query) || SUPPORTIVE_CARE_QUERY.test(query)) {
+  if (hasTopicAnchor(query)) {
     if (
       /cause of concerning symptoms/i.test(excerpt) &&
-      !/supportive care/i.test(exLower)
+      (DAILY_LIVING_QUERY.test(query) || SUPPORTIVE_CARE_QUERY.test(query)) &&
+      !/supportive care|지지\s*요법/i.test(exLower)
     ) {
       return false;
     }
-    if (SUPPORTIVE_CARE_QUERY.test(query) && isWeakSupportiveIntro(excerpt)) {
-      return false;
-    }
-    return /supportive care|quality of life|fatigue|infection|hygiene|exercise|emotional|rest|palliative|nausea|vomiting|antiemetic|side effect/i.test(
-      exLower,
-    );
-  }
-  if (SUN_UV_QUERY.test(query)) {
-    return /sunscreen|ultraviolet|\buv\b|sun exposure|sun protection|healthy living/i.test(
-      exLower,
-    );
-  }
-  if (TREATMENT_METHOD_QUERY.test(query)) {
-    return /surgery|surgical|lobectomy|radiation|chemotherapy|chemoradiation|definitive treatment/i.test(
-      exLower,
-    );
-  }
-
-  if (OVERVIEW_QUERY.test(query) || MY_DISEASE_QUERY.test(query)) {
-    return /treatment|staging|surgery|radiation|chemotherapy|clinical stage|histology|adenocarcinoma|squamous|supportive care/i.test(
-      exLower,
-    );
+    return excerptHasTopicAnchor(query, excerpt);
   }
 
   const terms = query
@@ -954,6 +1099,11 @@ export function filterRelevantCitations(
     const strong = citations.filter(
       (c) =>
         !isWeakSupportiveIntro(c.excerpt) &&
+        !(
+          isGeneralSideEffectManagementQuery(query) &&
+          (isDrugCatalogOrMonographText(c.excerpt) ||
+            isTreatmentProgramText(c.excerpt))
+        ) &&
         /nausea|vomiting|diarrhea|constipation|fatigue|infection|side effect|immunotherapy side|low blood count/i.test(
           c.excerpt,
         ),
@@ -1108,6 +1258,7 @@ function selectHitsWithAnchors(
   if (
     NUTRITION_QUERY.test(query) ||
     SUPPORTIVE_CARE_QUERY.test(query) ||
+    isGeneralSideEffectManagementQuery(query) ||
     DAILY_LIVING_QUERY.test(query) ||
     SUN_UV_QUERY.test(query) ||
     BIOMARKER_QUERY.test(query) ||
@@ -1189,7 +1340,12 @@ function koTopicHint(query: string): string {
   const hints: string[] = [];
   const isSclcTreatment =
     SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query);
-  if (NUTRITION_QUERY.test(query)) hints.push("영양 식이 체중 관리 식사");
+  if (isGeneralSideEffectManagementQuery(query)) {
+    hints.push(
+      "항암화학치료 후 일반적 주의사항 부작용 관리 오심 구토 설사 감염 위생 병원",
+    );
+  }
+  if (NUTRITION_QUERY.test(query)) hints.push("영양 식이 식단 식사 음식 Q136 Q137 Q138 Q139 항암치료 식사 주의 체력 회복");
   if (SUPPORTIVE_CARE_QUERY.test(query))
     hints.push("부작용 증상 관리 완화 지지 치료 오심 구토 피로 감염");
   if (BIOMARKER_QUERY.test(query))
@@ -1218,7 +1374,18 @@ function buildKoreanSearchQuery(
     mentionsSubtype || profile.histology == null
       ? [query]
       : [query, histologyLabel(profile.histology)];
-  const biomarker = biomarkerSearchHint(profile);
+  let biomarker = biomarkerSearchHint(profile);
+  if (
+    biomarker &&
+    !BIOMARKER_QUERY.test(query) &&
+    (NUTRITION_QUERY.test(query) ||
+      isGeneralSideEffectManagementQuery(query) ||
+      DAILY_LIVING_QUERY.test(query) ||
+      SUN_UV_QUERY.test(query) ||
+      CAREGIVER_QUERY.test(query))
+  ) {
+    biomarker = "";
+  }
   if (biomarker) parts.push(biomarker);
   const hint = koTopicHint(query);
   if (hint) parts.push(hint);
@@ -1351,12 +1518,13 @@ function getPageText(
 
 function nutritionSignalStrength(text: string): number {
   let strength = 0;
+  if (/Q\s*13[6-9]\b/.test(text)) strength += 5;
+  if (/도움이\s*되는\s*식단|식사에\s*주의|영양\s*관리/i.test(text)) strength += 4;
   if (/Common goals for healthy living include/i.test(text)) strength += 4;
-  if (/healthful foods|Eating healthful/i.test(text)) strength += 3;
-  if (/healthy living|managing body weight/i.test(text)) strength += 2;
+  if (isNutritionTopicText(text)) strength += 3;
   if (
     /registered dietitian/i.test(text) &&
-    !/healthful foods|healthy living|Common goals/i.test(text)
+    !isNutritionTopicText(text)
   ) {
     strength -= 2;
   }
@@ -1366,22 +1534,35 @@ function nutritionSignalStrength(text: string): number {
 
 function sclcTreatmentSignalStrength(text: string): number {
   let strength = 0;
-  if (/Initial treatment/i.test(text)) strength += 4;
-  if (/chemoradiation|chemoimmunotherapy|platinum|durvalumab/i.test(text)) {
+  if (/Initial treatment|초기\s*치료|1차\s*치료/i.test(text)) strength += 4;
+  if (/chemoradiation|chemoimmunotherapy|platinum|durvalumab|동시항암방사선/i.test(text)) {
     strength += 3;
   }
-  if (/Limited.?stage|Extensive.?stage/i.test(text)) strength += 2;
+  if (/Limited.?stage|Extensive.?stage|제한\s*병기|확장\s*병기/i.test(text)) strength += 2;
   if (isCoverOrFrontMatter(text) || isNavigationOrTocText(text)) strength -= 3;
   return strength;
 }
 
 function dailyLivingSignalStrength(text: string): number {
   let strength = 0;
-  if (/supportive care addresses|quality of life/i.test(text)) strength += 3;
-  if (/fatigue|infection|hygiene|hand washing|exercise|emotional/i.test(text)) {
+  if (/supportive care addresses|quality of life|지지\s*요법|삶의\s*질/i.test(text)) {
+    strength += 3;
+  }
+  if (/fatigue|infection|hygiene|hand washing|exercise|emotional|피로|감염|위생|운동|정서/i.test(text)) {
     strength += 2;
   }
-  if (/supportive care|nausea|vomiting/i.test(text)) strength += 1;
+  if (/supportive care|nausea|vomiting|지지\s*요법|오심|구토/i.test(text)) strength += 1;
+  if (isWeakSupportiveIntro(text)) strength -= 2;
+  return strength;
+}
+
+function patientSideEffectSignalStrength(text: string): number {
+  let strength = 0;
+  if (GENERAL_CHEMO_SIDE_EFFECT_CARE_TEXT.test(text)) strength += 5;
+  if (/탈모.*구역|구토.*설사|부작용이\s*흔히/i.test(text)) strength += 4;
+  if (PATIENT_SIDE_EFFECT_SYMPTOM_TEXT.test(text)) strength += 2;
+  if (isTreatmentProgramText(text)) strength -= 6;
+  if (isDrugMonographText(text)) strength -= 5;
   if (isWeakSupportiveIntro(text)) strength -= 2;
   return strength;
 }
@@ -1396,15 +1577,17 @@ function buildTopicFallbackCitations(
   let rejectExcerpt: (excerpt: string) => boolean = () => false;
 
   if (SUPPORTIVE_CARE_QUERY.test(query)) {
-    strengthFn = supportiveCareSignalStrength;
-    rejectExcerpt = isWeakSupportiveIntro;
+    strengthFn = isGeneralSideEffectManagementQuery(query)
+      ? patientSideEffectSignalStrength
+      : supportiveCareSignalStrength;
+    rejectExcerpt = (excerpt) =>
+      isWeakSupportiveIntro(excerpt) ||
+      (isGeneralSideEffectManagementQuery(query) &&
+        (isDrugCatalogOrMonographText(excerpt) ||
+          isTreatmentProgramText(excerpt)));
   } else if (NUTRITION_QUERY.test(query)) {
     strengthFn = nutritionSignalStrength;
-    rejectExcerpt = (excerpt) =>
-      /registered dietitian/i.test(excerpt) &&
-      !/healthful foods|healthy living|Common goals for healthy living/i.test(
-        excerpt,
-      );
+    rejectExcerpt = (excerpt) => !isNutritionTopicText(excerpt);
   } else if (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) {
     strengthFn = sclcTreatmentSignalStrength;
   } else if (DAILY_LIVING_QUERY.test(query)) {
@@ -1473,6 +1656,13 @@ export function buildCitations(
 
   for (const hit of candidates) {
     const pageText = getPageText(pool, hit.chunk.docId, hit.chunk.page, query);
+    if (
+      isGeneralSideEffectManagementQuery(query) &&
+      (isDrugCatalogOrMonographText(pageText) ||
+        isTreatmentProgramText(pageText))
+    ) {
+      continue;
+    }
     const excerpt = extractRelevantExcerpt(pageText, query);
     if (
       !excerpt ||
@@ -1497,7 +1687,7 @@ export function buildCitations(
     if (BIOMARKER_QUERY.test(query) && /PD-L1/i.test(excerpt)) return 0;
     if (
       NUTRITION_QUERY.test(query) &&
-      /healthful foods|healthy living/i.test(excerpt)
+      isNutritionTopicText(excerpt)
     ) {
       return 0;
     }
@@ -1520,6 +1710,19 @@ export function buildCitations(
       if (/nausea|vomiting|antiemetic/i.test(excerpt)) return 0;
       if (/diarrhea|constipation|mouth|mucositis/i.test(excerpt)) return 1;
       if (isWeakSupportiveIntro(excerpt)) return 9;
+      if (
+        isGeneralSideEffectManagementQuery(query) &&
+        (isDrugCatalogOrMonographText(excerpt) ||
+          isTreatmentProgramText(excerpt))
+      ) {
+        return 10;
+      }
+      if (
+        isGeneralSideEffectManagementQuery(query) &&
+        GENERAL_CHEMO_SIDE_EFFECT_CARE_TEXT.test(excerpt)
+      ) {
+        return -1;
+      }
     }
     if (isCoverOrFrontMatter(excerpt)) return 8;
     if (isGenericBoilerplateExcerpt(excerpt)) return 9;
@@ -1536,6 +1739,7 @@ export function buildCitations(
   const maxCitations =
     NUTRITION_QUERY.test(query) ||
     SUPPORTIVE_CARE_QUERY.test(query) ||
+    isGeneralSideEffectManagementQuery(query) ||
     OVERVIEW_QUERY.test(query)
       ? 3
       : 4;
@@ -1620,6 +1824,8 @@ export function shouldSearchGuidelines(
 ): boolean {
   if (isOffTopicQuery(query)) return false;
   if (isChitchatQuery(query)) return false;
+  if (isSurvivalDashboardQuery(query)) return false;
+  if (isEmotionalSupportQuery(query)) return false;
   if (mode === "search") return true;
 
   // auto: 잡담·관련 없는 주제만 제외하고 항상 가이드라인 검색
@@ -1628,6 +1834,7 @@ export function shouldSearchGuidelines(
   // chat(편하게 얘기하기): 감정·잡담은 자유 대화, 의학 정보 질문은 자료 근거로
   // 답변해 환각/오답을 방지한다.
   if (mode === "chat") {
+    if (CAREGIVER_QUERY.test(query)) return true;
     if (MEDICAL_SIGNAL.test(query)) return true;
     const lastUserChat = [...priorHistory]
       .reverse()
@@ -1826,7 +2033,8 @@ const CHATBOT_PERSONA = `당신은 화순전남대학교병원 폐암 환자 안
 - 대시보드에서 넘어온 환자 정보(나이·성별·조직형·유전자 변이·PD-L1)를 참고해 맞춤형으로 답합니다.
 - 대화체, 완결된 문장, 방어적 마무리·면책 반복 금지.
 - 환자에게 가이드라인 원문·PDF·캡처 제출을 요청하지 마세요.
-- **간결히** 답하세요. 목록 4~6개, 항목당 1~2문장. 되묻기·마무리 질문 금지.
+- **간결히** 답하세요. 목록 4~6개, 항목당 1~2문장. 잡담·감정 대화가 아닌 **넓은 의학 질문**(예: 항암 부작용 관리 전반)은 마지막에 **한 문장**으로 더 구체적인 질문을 유도해도 됩니다. 그 외에는 되묻기·마무리 질문을 남발하지 마세요.
+- 질문·환자 정보·대화에 없는 **특정 약제명**은 근거가 있어도 일반 질문 답변에 넣지 마세요.
 - 목록은 \`1. 짧은 제목: 설명\` 형식으로 한 줄에 씁니다. 마크다운(**, #, _)은 쓰지 마세요. 번호만 단독 줄로 두지 마세요.
 - 항목마다 "제목:", "(원문 근거: …)", "원문 내용은 아래처럼" 같은 **메타·중복 라벨 금지**. 환자에게 읽히는 한국어 설명만 쓰세요. (원문은 UI에 따로 표시됩니다.)`;
 
@@ -2067,7 +2275,7 @@ export function buildGeneralMedicalMessages(
 - 질문의 핵심에 맞게 **4~6개 항목**으로 간결히 설명하세요.
 - NCCN·가이드라인·원문·발췌라는 말은 쓰지 마세요.
 - "관련이 없어", "찾지 못했" 같은 메타 설명으로 시작하지 마세요. 바로 본론부터 답하세요.
-- 폐암 환자·보호자 관점에서 실질적으로 도움이 되게 답하세요.${guideMode === "chat" ? WARM_TONE_HINT : ""}
+- 폐암 환자·보호자 관점에서 실질적으로 도움이 되게 답하세요.${guideMode === "chat" ? WARM_TONE_HINT : ""}${buildGeneralSideEffectAnswerGuide(question)}
 
 **현재 환자 정보 (대시보드)**
 ${buildPatientContextBlock(patientContext)}`,
@@ -2113,7 +2321,7 @@ export function buildRagMessages(
 - 환자에게 원문을 더 보내달라고 하지 마세요. 찾은 원문 범위에서 단계별로 최대한 구체적으로 설명하세요.
 - 원문 직역·### 제목·페이지 번호는 응답에 넣지 마세요. (원문은 UI에 별도 표시됩니다.)
 - "제목:", "(원문 근거: …)", "원문 내용은 아래처럼" 같은 **메타·중복 라벨 금지**. 한국어로만 간단히 설명하세요.
-- 목차 나열 금지.${lineHint}${followUpHint}${guideMode === "chat" ? WARM_TONE_HINT : ""}`;
+- 목차 나열 금지.${lineHint}${followUpHint}${guideMode === "chat" ? WARM_TONE_HINT : ""}${buildGeneralSideEffectAnswerGuide(question)}`;
 
   return [
     {
@@ -2324,22 +2532,6 @@ ${survivalBlock}`,
     ...toChatHistory(priorHistory),
     { role: "user", content: question },
   ];
-}
-
-function hasTopicAnchor(query: string): boolean {
-  return (
-    NUTRITION_QUERY.test(query) ||
-    SUPPORTIVE_CARE_QUERY.test(query) ||
-    BIOMARKER_QUERY.test(query) ||
-    TREATMENT_METHOD_QUERY.test(query) ||
-    DAILY_LIVING_QUERY.test(query) ||
-    SUN_UV_QUERY.test(query) ||
-    (SCLC_QUERY.test(query) && TREATMENT_METHOD_QUERY.test(query)) ||
-    SCLC_QUERY.test(query) ||
-    METASTATIC_QUERY.test(query) ||
-    EARLY_STAGE_QUERY.test(query) ||
-    MY_DISEASE_QUERY.test(query)
-  );
 }
 
 export async function planChatResponse(

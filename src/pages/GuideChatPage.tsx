@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ChevronRight,
@@ -79,11 +79,16 @@ const INPUT_PLACEHOLDER: Record<GuideSearchMode, string> = {
 const GuideChatPage = () => {
   const llm = useLlmSettings();
   const { profile, configured } = usePatientProfile();
-  const survival = useSurvival(resolveProfileForSurvival(profile));
+  const mutationsKey = profile.selectedMutations.join(',');
+  const survivalProfile = useMemo(
+    () => resolveProfileForSurvival(profile),
+    [profile.age, profile.gender, profile.histology, profile.pdl1, mutationsKey],
+  );
+  const survival = useSurvival(survivalProfile);
   const chat = useGuideChat(
     {
       profile,
-      survival: survival.isLoading ? undefined : survival.data,
+      survival: survival.data ?? (survival.isLoading ? undefined : null),
     },
     llm.selectedModelId,
   );
@@ -196,6 +201,17 @@ const GuideChatPage = () => {
         {chat.dataError && (
           <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {chat.dataError}
+          </div>
+        )}
+
+        {!chat.dataReady && !chat.dataError && (
+          <div
+            className="mb-4 flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+            가이드 자료를 불러오는 중…
           </div>
         )}
 
@@ -393,8 +409,13 @@ const GuideChatPage = () => {
               })}
 
               {chat.isChatting && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                <div
+                  className="flex items-center gap-2 text-sm text-muted-foreground"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                   {loadingMessage}
                 </div>
               )}

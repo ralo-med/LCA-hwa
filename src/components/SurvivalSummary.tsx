@@ -8,6 +8,7 @@ import {
   Globe2,
   Info,
   Library,
+  Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,6 +63,7 @@ const SurvivalSummary = ({
 }: SurvivalSummaryProps) => {
   const [studiesOpen, setStudiesOpen] = useState(false);
   const showSkeleton = isLoading && !data;
+  const isRefreshing = isLoading && !!data;
   const median = data?.median ?? null;
   const year5 = data?.year5 ?? null;
   const noData = !!data && data.cohortN === 0;
@@ -87,6 +89,17 @@ const SurvivalSummary = ({
 
   return (
     <div className="space-y-3 overflow-visible">
+      {isRefreshing && (
+        <div
+          className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+          role="status"
+          aria-live="polite"
+        >
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+          조건이 변경되어 생존 추정을 다시 계산하는 중…
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card className="overflow-hidden border-primary/20 bg-linear-to-br from-primary/10 via-primary/5 to-transparent">
           <CardContent className="space-y-3 p-6">
@@ -125,7 +138,12 @@ const SurvivalSummary = ({
               <Skeleton />
             ) : (
               <>
-                <div className="text-5xl font-bold tracking-tight text-foreground">
+                <div
+                  className={cn(
+                    'text-5xl font-bold tracking-tight text-foreground transition-opacity',
+                    isRefreshing && 'opacity-50',
+                  )}
+                >
                   {fmtPct(year5)}
                   <span className="ml-1 text-2xl font-medium text-muted-foreground">
                     {year5 !== null ? "%" : ""}
@@ -190,7 +208,12 @@ const SurvivalSummary = ({
               <Skeleton />
             ) : (
               <>
-                <div className="text-5xl font-bold tracking-tight text-foreground">
+                <div
+                  className={cn(
+                    'text-5xl font-bold tracking-tight text-foreground transition-opacity',
+                    isRefreshing && 'opacity-50',
+                  )}
+                >
                   {hasMedian ? median.toFixed(1) : "—"}
                   <span className="ml-1 text-2xl font-medium text-muted-foreground">
                     {hasMedian ? "년" : ""}

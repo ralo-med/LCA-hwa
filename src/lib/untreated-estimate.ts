@@ -21,6 +21,22 @@ const LITERATURE_CAP = { year1: 22, year3: 6, year5: 2.5 };
 /** 치료 코호트 대비 대략 비율 (시각 비교용) */
 const RATIO_VS_TREATED = { year1: 0.38, year3: 0.14, year5: 0.09 };
 
+/** null 입력 시 치료 코호트 fallback (%) */
+const TREATED_FALLBACK = { year1: 40, year3: 12, year5: 5 } as const;
+
+/** 연도별 최소 하한 (%) */
+const YEAR_FLOOR = { year1: 1, year3: 0.5, year5: 0.3 } as const;
+
+function clampUntreatedYear(
+  treated: number | null,
+  fallback: number,
+  ratio: number,
+  cap: number,
+  floor: number,
+): number {
+  return Math.min(cap, Math.max(floor, (treated ?? fallback) * ratio));
+}
+
 export function estimateUntreatedFromTreated(
   year1: number | null,
   year3: number | null,
@@ -28,17 +44,26 @@ export function estimateUntreatedFromTreated(
 ): UntreatedSurvivalEstimate | null {
   if (year1 === null && year3 === null && year5 === null) return null;
 
-  const y1 = Math.min(
+  const y1 = clampUntreatedYear(
+    year1,
+    TREATED_FALLBACK.year1,
+    RATIO_VS_TREATED.year1,
     LITERATURE_CAP.year1,
-    Math.max(1, (year1 ?? 40) * RATIO_VS_TREATED.year1),
+    YEAR_FLOOR.year1,
   );
-  const y3 = Math.min(
+  const y3 = clampUntreatedYear(
+    year3,
+    TREATED_FALLBACK.year3,
+    RATIO_VS_TREATED.year3,
     LITERATURE_CAP.year3,
-    Math.max(0.5, (year3 ?? 12) * RATIO_VS_TREATED.year3),
+    YEAR_FLOOR.year3,
   );
-  const y5 = Math.min(
+  const y5 = clampUntreatedYear(
+    year5,
+    TREATED_FALLBACK.year5,
+    RATIO_VS_TREATED.year5,
     LITERATURE_CAP.year5,
-    Math.max(0.3, (year5 ?? 5) * RATIO_VS_TREATED.year5),
+    YEAR_FLOOR.year5,
   );
 
   const points = [

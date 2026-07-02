@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import PatientForm from '@/components/PatientForm';
 import PrintHeader from '@/components/PrintHeader';
 import PrintPatientSummary from '@/components/PrintPatientSummary';
@@ -16,7 +16,11 @@ import { generateIssueNumber } from '@/lib/utils';
 const DashboardPage = () => {
   const patient = usePatientProfile();
   const { profile, configured } = patient;
-  const survivalProfile = resolveProfileForSurvival(profile);
+  const mutationsKey = profile.selectedMutations.join(',');
+  const survivalProfile = useMemo(
+    () => resolveProfileForSurvival(profile),
+    [profile.age, profile.gender, profile.histology, profile.pdl1, mutationsKey],
+  );
   const survival = useSurvival(survivalProfile);
 
   const [issueNumber] = useState<string>(() => generateIssueNumber());

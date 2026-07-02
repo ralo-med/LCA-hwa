@@ -9,6 +9,48 @@ export interface SurvivalAnchor {
 
 const DEFAULT_ANCHOR_MONTHS = [0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60];
 
+/** Greenwood 95% CI z-score */
+const Z_SCORE_95 = 1.96;
+
+/** Catmull-Rom 스플라인 제어점 분모 */
+const CATMULL_ROM_DENOMINATOR = 6;
+
+/** 5년 생존율만 있을 때 1·3년 보간 계수 */
+const YEAR5_ONLY_INTERPOLATION = {
+  year1: { multiplier: 2.1, offset: 0.38, cap: 0.95 },
+  year3: { multiplier: 1.65, offset: 0.18, cap: 0.9 },
+} as const;
+
+function survivalAtTime(
+  curve: { t: number; survival: number }[],
+  t: number,
+): number {
+  if (t < curve[0].t) return 1;
+  let idx = 0;
+  for (let i = 0; i < curve.length; i++) {
+    if (curve[i].t <= t) idx = i;
+    else break;
+  }
+  return curve[idx].survival;
+}
+
+function survivalAtTimeWithVariance(
+  curve: { t: number; survival: number; variance: number }[],
+  t: number,
+): { s: number; v: number } {
+  if (t < curve[0].t) return { s: 1, v: 0 };
+  let idx = 0;
+  for (let i = 0; i < curve.length; i++) {
+    if (curve[i].t <= t) idx = i;
+    else break;
+  }
+  return { s: curve[idx].survival, v: curve[idx].variance };
+}
+
+function clampSurvivalRate(rate: number): number {
+  return Math.max(0, Math.min(1, rate));
+}
+
 /** Kaplan-Meier step function SVG path */
 export function buildKmStepPath(
   curve: { t: number; survival: number }[],
@@ -43,7 +85,7 @@ export function buildKmStepCiBand(
 ): string {
   if (curve.length === 0) return '';
   const xOf = (m: number) => Math.min(viewW, (m / maxMonths) * viewW);
-  const yOf = (s: number) => viewH - Math.max(0, Math.min(1, s)) * viewH;
+  const yOf = (s: number) => viewH - clampSurvivalRate(s) * viewH;
 
   const upper: [number, number][] = [[0, 1]];
   const lower: [number, number][] = [[0, 1]];
@@ -53,8 +95,8 @@ export function buildKmStepCiBand(
   for (const p of curve) {
     if (p.t > maxMonths) break;
     const se = Math.sqrt(Math.max(0, p.variance));
-    const u = Math.min(1, p.survival + 1.96 * se);
-    const l = Math.max(0, p.survival - 1.96 * se);
+    const u = Math.min(1, p.survival + Z_SCORE_95 * se);
+    const l = Math.max(0, p.survival - Z_SCORE_95 * se);
     upper.push([p.t, prevU], [p.t, u]);
     lower.push([p.t, prevL], [p.t, l]);
     prevU = u;
@@ -75,19 +117,9 @@ export function sampleKmAnchors(
 ): SurvivalAnchor[] {
   if (curve.length === 0) return [{ months: 0, survival: 1 }];
 
-  const atTime = (t: number): number => {
-    if (t < curve[0].t) return 1;
-    let idx = 0;
-    for (let i = 0; i < curve.length; i++) {
-      if (curve[i].t <= t) idx = i;
-      else break;
-    }
-    return curve[idx].survival;
-  };
-
   return DEFAULT_ANCHOR_MONTHS.filter((m) => m <= maxMonths).map((months) => ({
     months,
-    survival: atTime(months),
+    survival: survivalAtTime(curve, months),
   }));
 }
 
@@ -107,8 +139,9 @@ export function anchorsFromYearly(
 /** 5년 생존율만 있을 때 1·3년 대략 보간 (인구곡선 형태) */
 export function anchorsFromYear5Only(year5Pct: number): SurvivalAnchor[] {
   const y5 = year5Pct / 100;
-  const y1 = Math.min(0.95, y5 * 2.1 + 0.38);
-  const y3 = Math.min(0.9, y5 * 1.65 + 0.18);
+  const { year1: y1cfg, year3: y3cfg } = YEAR5_ONLY_INTERPOLATION;
+  const y1 = Math.min(y1cfg.cap, y5 * y1cfg.multiplier + y1cfg.offset);
+  const y3 = Math.min(y3cfg.cap, y5 * y3cfg.multiplier + y3cfg.offset);
   return [
     { months: 0, survival: 1 },
     { months: 12, survival: y1 },
@@ -129,7 +162,7 @@ export function buildSmoothSvgPath(
     .filter((a) => a.months <= maxMonths)
     .map((a) => ({
       x: (a.months / maxMonths) * viewW,
-      y: viewH - Math.max(0, Math.min(1, a.survival)) * viewH,
+      y: viewH - clampSurvivalRate(a.survival) * viewH,
     }));
 
   if (pts.length < 2) return '';
@@ -142,10 +175,10 @@ export function buildSmoothSvgPath(
     const p2 = pts[i + 1];
     const p3 = pts[Math.min(pts.length - 1, i + 2)];
 
-    const cp1x = p1.x + (p2.x - p0.x) / 6;
-    const cp1y = p1.y + (p2.y - p0.y) / 6;
-    const cp2x = p2.x - (p3.x - p1.x) / 6;
-    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    const cp1x = p1.x + (p2.x - p0.x) / CATMULL_ROM_DENOMINATOR;
+    const cp1y = p1.y + (p2.y - p0.y) / CATMULL_ROM_DENOMINATOR;
+    const cp2x = p2.x - (p3.x - p1.x) / CATMULL_ROM_DENOMINATOR;
+    const cp2y = p2.y - (p3.y - p1.y) / CATMULL_ROM_DENOMINATOR;
 
     d += ` C ${cp1x.toFixed(2)},${cp1y.toFixed(2)} ${cp2x.toFixed(2)},${cp2y.toFixed(2)} ${p2.x.toFixed(2)},${p2.y.toFixed(2)}`;
   }
@@ -162,31 +195,21 @@ export function buildSmoothCiBand(
 ): string {
   if (curve.length === 0) return '';
 
-  const atTime = (t: number) => {
-    if (t < curve[0].t) return { s: 1, v: 0 };
-    let idx = 0;
-    for (let i = 0; i < curve.length; i++) {
-      if (curve[i].t <= t) idx = i;
-      else break;
-    }
-    return { s: curve[idx].survival, v: curve[idx].variance };
-  };
-
   const upperAnchors: SurvivalAnchor[] = [];
   const lowerAnchors: SurvivalAnchor[] = [];
 
   for (const months of DEFAULT_ANCHOR_MONTHS.filter((m) => m <= maxMonths)) {
-    const { s, v } = atTime(months);
+    const { s, v } = survivalAtTimeWithVariance(curve, months);
     const se = Math.sqrt(Math.max(0, v));
-    upperAnchors.push({ months, survival: Math.min(1, s + 1.96 * se) });
-    lowerAnchors.push({ months, survival: Math.max(0, s - 1.96 * se) });
+    upperAnchors.push({ months, survival: Math.min(1, s + Z_SCORE_95 * se) });
+    lowerAnchors.push({ months, survival: Math.max(0, s - Z_SCORE_95 * se) });
   }
 
   const up = buildSmoothSvgPath(upperAnchors, viewW, viewH, maxMonths);
   if (!up) return '';
 
   const xOf = (m: number) => (m / maxMonths) * viewW;
-  const yOf = (s: number) => viewH - Math.max(0, Math.min(1, s)) * viewH;
+  const yOf = (s: number) => viewH - clampSurvivalRate(s) * viewH;
 
   let d = up;
   for (const a of [...lowerAnchors].reverse()) {

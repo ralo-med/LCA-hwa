@@ -71,14 +71,18 @@ export function getCertaintyLabel(
   return CERTAINTY_LABEL[certainty];
 }
 
+/** 코호트 필터용 decade 시작 연령 (10년 단위) */
+function decadeStart(age: number): number {
+  return Math.floor(age / 10) * 10;
+}
+
 /** UI용 연령대 라벨 (age는 decade 시작값: 60 → "60대") */
 export function formatAgeDecade(age: number): string {
-  const start = Math.floor(age / 10) * 10;
-  return `${start}대`;
+  return `${decadeStart(age)}대`;
 }
 
 /** 코호트 필터용 [시작, 끝] (10년 단위) */
 export function getAgeDecadeBand(age: number): [number, number] {
-  const start = Math.floor(age / 10) * 10;
+  const start = decadeStart(age);
   return [start, start + 9];
 }

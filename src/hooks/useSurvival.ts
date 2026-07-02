@@ -25,17 +25,22 @@ export function useSurvival(profile: PatientProfile, debounceMs: number = 300): 
   const [error, setError] = useState<string | null>(null);
   const prevHistology = useRef(profile.histology);
 
+  const mutationsKey = profile.selectedMutations.join(',');
+
   useEffect(() => {
     let cancelled = false;
+
     const histologyChanged = prevHistology.current !== profile.histology;
     if (histologyChanged) {
       prevHistology.current = profile.histology;
       setData(null);
-      setIsLoading(true);
     }
-    setError(null);
+    setIsLoading(true);
 
     const timer = setTimeout(async () => {
+      if (cancelled) return;
+      setError(null);
+
       try {
         const result = await estimateSurvival(profile);
         if (cancelled) return;
@@ -74,7 +79,15 @@ export function useSurvival(profile: PatientProfile, debounceMs: number = 300): 
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [profile, debounceMs]);
+  }, [
+    profile,
+    profile.age,
+    profile.gender,
+    profile.histology,
+    profile.pdl1,
+    mutationsKey,
+    debounceMs,
+  ]);
 
   return { data, isLoading, studiesMetaPending, error };
 }

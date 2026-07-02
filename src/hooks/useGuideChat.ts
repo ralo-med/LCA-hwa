@@ -41,16 +41,24 @@ export function useGuideChat(
   >(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     loadGuideChunks()
       .then((store) => {
+        if (cancelled) return;
         setDataReady(true);
         setDataError('');
         if (store.model) setEmbedModel(store.model);
       })
       .catch((err: Error) => {
+        if (cancelled) return;
         setDataError(err.message);
         setDataReady(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const send = async (overrideText?: string) => {
@@ -93,7 +101,7 @@ export function useGuideChat(
       const answerType = plan.fromSurvivalDashboard
         ? 'survival'
         : plan.fromGuidelineRag &&
-            plan.citations.length > 0 &&
+            sources.length > 0 &&
             !answerDeniesGuidelineRelevance(text)
           ? 'guideline'
           : resolved.answerType;
